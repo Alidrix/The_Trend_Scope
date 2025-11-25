@@ -43,7 +43,7 @@ Avant `docker compose up -d`, vérifiez :
 | `APP_PASSWORD` | Mot de passe 16+ caractères (UTF‑8) | `m0tDeP@55€安全` |
 | `APP_SECRET` | Secret JWT HMAC | `super-long-random-string` |
 | `FRONTEND_ORIGIN` | Origine autorisée pour les cookies/JWT | `http://localhost:5173` |
-| `DATABASE_URL` | Chaîne Postgres | `postgres://postgres:postgres@db:5432/viral_radar` |
+| `DATABASE_URL` | Chaîne Postgres (par défaut `db` en Docker) | `postgres://postgres:postgres@db:5432/viral` |
 
 💡 Si vous développez hors Docker, gardez les mêmes variables pour éviter les écarts entre environnements.
 
