@@ -36,8 +36,9 @@ Avant `docker compose up -d`, vérifiez :
 1. Copier le modèle : `cp .env.example .env`
 2. Définir :
    - `YOUTUBE_API_KEY`
-   - `AUTH_USERNAME` / `AUTH_PASSWORD` (16+ caractères, peut inclure caractères spéciaux/japonais)
-   - `JWT_SECRET`
+   - `APP_USERNAME` / `APP_PASSWORD` (16+ caractères, peut inclure caractères spéciaux/japonais)
+   - `APP_SECRET` (clé JWT)
+   - `FRONTEND_ORIGIN` (ex : http://localhost:5173)
    - `DATABASE_URL` (par défaut vers le service `db` en Docker)
 
 ## 🚀 Déploiement rapide (Docker)
