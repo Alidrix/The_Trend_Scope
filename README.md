@@ -1,3 +1,4 @@
+# Youtube_Tiktok_WEB
 # 🎥 Viral Radar – YouTube & TikTok (WIP)
 
 Un outil auto‑hébergé pour repérer et suivre les vidéos virales YouTube (TikTok à venir) avec stats, historique, filtres thématiques et notifications locales. Conçu pour un usage personnel sur port **4443** avec backend Axum + PostgreSQL et frontend SvelteKit.
@@ -24,7 +25,7 @@ Docker-compose.yml  → Orchestration backend/frontend/db (port 4443 exposé)
 - Docker & Docker Compose
 - (Optionnel) Rust + Node 20 si vous voulez développer hors conteneur
 
-## ✅ Checklist « ça démarre du premier coup »
+## ✅ Checklist « ça démarre du premier coup »
 Avant `docker compose up -d`, vérifiez :
 - `.env` est présent et bien rempli (`APP_USERNAME`, `APP_PASSWORD` ≥ 16 caractères, `APP_SECRET`, `YOUTUBE_API_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN`).
 - Le port `4443` n’est pas occupé (backend) et `5173` libre (frontend exposé).
@@ -39,21 +40,19 @@ Avant `docker compose up -d`, vérifiez :
 | Variable | Description | Exemple |
 | --- | --- | --- |
 | `YOUTUBE_API_KEY` | Clé API YouTube v3 | `AIza...` |
-| `APP_USERNAME` | Identifiant de connexion (UTF‑8) | `admin` |
-| `APP_PASSWORD` | Mot de passe 16+ caractères (UTF‑8) | `m0tDeP@55€安全` |
+| `APP_USERNAME` | Identifiant de connexion (UTF‑8) — optionnel (seed) | `admin` |
+| `APP_PASSWORD` | Mot de passe 16+ caractères (UTF‑8) — optionnel (seed) | `m0tDeP@55€安全` |
 | `APP_SECRET` | Secret JWT HMAC | `super-long-random-string` |
 | `FRONTEND_ORIGIN` | Origine autorisée pour les cookies/JWT | `http://localhost:5173` |
 | `DATABASE_URL` | Chaîne Postgres (par défaut `db` en Docker) | `postgres://postgres:postgres@db:5432/viral` |
 
 💡 Si vous développez hors Docker, gardez les mêmes variables pour éviter les écarts entre environnements.
-=======
-## 🔑 Configuration
-1. Copier le modèle : `cp .env.example .env`
-2. Définir :
-   - `YOUTUBE_API_KEY`
-   - `AUTH_USERNAME` / `AUTH_PASSWORD` (16+ caractères, peut inclure caractères spéciaux/japonais)
-   - `JWT_SECRET`
-   - `DATABASE_URL` (par défaut vers le service `db` en Docker)
+🤫 Tous les secrets sont centralisés dans `.env` (une seule édition suffit) : ni le backend ni le frontend ne demandent de re-saisir la clé YouTube ou les mots de passe ailleurs.
+
+### Création de compte et clés privées
+- **Compte unique** : au premier démarrage, créez l’utilisateur directement depuis la page de login (bloc « Initialisation »). Le mot de passe est haché en base.
+- **Seed optionnel** : si `APP_USERNAME` et `APP_PASSWORD` sont définis dans `.env`, le compte est créé automatiquement lors du boot si aucun utilisateur n’existe.
+- **API YouTube** : définissez `YOUTUBE_API_KEY` une seule fois dans `.env` pour l’API backend ; le frontend détecte sa présence et l’indique sur l’écran d’authentification.
 
 ## 🚀 Déploiement rapide (Docker)
 ```bash
@@ -64,6 +63,8 @@ docker compose up -d
 - Frontend : http://localhost:5173 (cible l’API backend)
 - Postgres : volume `pgdata`, migrations appliquées depuis `db/migrations`
 
+🌐 Accès : l’UI (panel d’authentification + création de compte) est servie par le frontend sur **http://localhost:5173**. Le port **4443** correspond uniquement à l’API backend ; taper http://localhost:4443 affichera l’API, pas l’interface.
+
 ### Vérifier / arrêter
 ```bash
 docker compose ps
@@ -72,6 +73,18 @@ docker compose logs -f backend
 docker compose down        # stop
 docker compose down -v     # stop + reset base
 ```
+
+## 🔧 Résolution des conflits Git
+- La plupart des conflits venaient des mêmes sections modifiées dans plusieurs branches (README, login, auth backend). Chaque
+  branche utilisait parfois des noms de variables différents (`APP_*` vs `AUTH_*`), ce qui a multiplié les divergences.
+- Pour éviter de nouveaux conflits :
+  - Gardez la nomenclature actuelle des variables (`APP_USERNAME`, `APP_PASSWORD`, `APP_SECRET`, `YOUTUBE_API_KEY`, `DATABASE_URL`,
+    `FRONTEND_ORIGIN`).
+  - Mettez à jour votre branche locale régulièrement : `git fetch origin && git rebase origin/main` (ou `git pull --rebase`).
+  - Si un conflit survient, conservez la version la plus récente du README (tableau des variables + checklist) et du flux
+    d’authentification (création de compte unique + détection de clé API), puis retestez avec `cargo test -q --manifest-path
+    backend/Cargo.toml`.
+
 
 ## 🧪 Tests
 Backend (dans /backend) :
