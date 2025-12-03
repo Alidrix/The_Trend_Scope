@@ -1,7 +1,7 @@
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts, Json, State},
-    http::{header, request::Parts, StatusCode},
+    http::{self, header, request::Parts, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Router,
@@ -9,20 +9,20 @@ use axum::{
 use chrono::{DateTime, Utc};
 use dotenvy::dotenv;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, postgres::PgRow, PgPool, Row};
 use std::net::SocketAddr;
 use thiserror::Error;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
-use tracing::{error, info};
+use tracing::info;
+
+const MIN_PASSWORD_LENGTH: usize = 10;
 
 #[derive(Clone)]
 struct AppState {
     pool: PgPool,
     auth: AuthConfig,
     youtube: YoutubeConfig,
-    http: Client,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -53,24 +53,23 @@ struct AuthConfig {
 struct SeedUser {
     username: String,
     password: String,
-=======
-    username: String,
-    password_hash: String,
-    jwt_secret: String,
 }
 
 impl AuthConfig {
     fn from_env() -> Result<Self, AppError> {
-        let jwt_secret = std::env::var("APP_SECRET").unwrap_or_else(|_| "dev-secret-change-me".into());
+        let jwt_secret = std::env::var("SECRET_KEY")
+            .or_else(|_| std::env::var("APP_SECRET"))
+            .unwrap_or_else(|_| "dev-secret-change-me".into());
+
         let seed_user = match (
             std::env::var("APP_USERNAME").ok(),
             std::env::var("APP_PASSWORD").ok(),
         ) {
             (Some(username), Some(password)) => {
-                if password.chars().count() < 16 {
-                    return Err(AppError::Config(
-                        "APP_PASSWORD must be at least 16 characters".into(),
-                    ));
+                if password.chars().count() < MIN_PASSWORD_LENGTH {
+                    return Err(AppError::Config(format!(
+                        "APP_PASSWORD must be at least {MIN_PASSWORD_LENGTH} characters"
+                    )));
                 }
                 Some(SeedUser { username, password })
             }
@@ -81,24 +80,6 @@ impl AuthConfig {
             jwt_secret,
             seed_user,
         })
-    }
-
-        let username = std::env::var("APP_USERNAME").map_err(|_| AppError::Config("APP_USERNAME".into()))?;
-        let password = std::env::var("APP_PASSWORD").map_err(|_| AppError::Config("APP_PASSWORD".into()))?;
-        if password.chars().count() < 16 {
-            return Err(AppError::Config("APP_PASSWORD must be at least 16 characters".into()));
-        }
-        let password_hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)?;
-        let jwt_secret = std::env::var("APP_SECRET").unwrap_or_else(|_| "dev-secret-change-me".into());
-        Ok(Self {
-            username,
-            password_hash,
-            jwt_secret,
-        })
-    }
-
-    fn verify(&self, username: &str, password: &str) -> bool {
-        username == self.username && bcrypt::verify(password, &self.password_hash).unwrap_or(false)
     }
 
     fn encoding_key(&self) -> EncodingKey {
@@ -118,7 +99,6 @@ struct YoutubeConfig {
 impl YoutubeConfig {
     fn from_env() -> Result<Self, AppError> {
         let api_key = std::env::var("YOUTUBE_API_KEY").unwrap_or_default();
-        let api_key = std::env::var("YOUTUBE_API_KEY").unwrap_or_else(|_| "demo-key".into());
         Ok(Self { api_key })
     }
 }
@@ -235,7 +215,9 @@ async fn main() -> Result<(), AppError> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@db:5432/viral".into());
+    let database_url = std::env::var("DATABASE_URL")
+        .map_err(|_| AppError::Config("DATABASE_URL is required".into()))?;
+
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)
@@ -248,7 +230,6 @@ async fn main() -> Result<(), AppError> {
         pool,
         auth,
         youtube,
-        http: Client::new(),
     };
 
     let app = Router::new()
@@ -293,7 +274,6 @@ async fn ensure_seed_user(pool: &PgPool, config: &AuthConfig) -> Result<(), AppE
             .bind(password_hash)
             .execute(pool)
             .await?;
-        info!("seed user {} created", seed.username);
     }
 
     Ok(())
@@ -323,10 +303,10 @@ async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<RegisterPayload>,
 ) -> Result<Json<ApiMessage>, AppError> {
-    if payload.password.chars().count() < 16 {
-        return Err(AppError::BadRequest(
-            "Le mot de passe doit contenir au moins 16 caractères".into(),
-        ));
+    if payload.password.chars().count() < MIN_PASSWORD_LENGTH {
+        return Err(AppError::BadRequest(format!(
+            "Le mot de passe doit contenir au moins {MIN_PASSWORD_LENGTH} caractères"
+        )));
     }
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
@@ -349,20 +329,20 @@ async fn register(
     }))
 }
 
-async fn login(State(state): State<AppState>, Json(payload): Json<Credentials>) -> Result<Json<AuthResponse>, AppError> {
-    let Some(password_hash) = sqlx::query_scalar::<_, String>(
-        "SELECT password_hash FROM users WHERE username = $1",
-    )
-    .bind(&payload.username)
-    .fetch_optional(&state.pool)
-    .await?
+async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<Credentials>,
+) -> Result<Json<AuthResponse>, AppError> {
+    let Some(password_hash) =
+        sqlx::query_scalar::<_, String>("SELECT password_hash FROM users WHERE username = $1")
+            .bind(&payload.username)
+            .fetch_optional(&state.pool)
+            .await?
     else {
         return Err(AppError::Unauthorized);
     };
 
     if !bcrypt::verify(&payload.password, &password_hash).unwrap_or(false) {
-async fn login(State(state): State<AppState>, Json(payload): Json<Credentials>) -> Result<Json<AuthResponse>, AppError> {
-    if !state.auth.verify(&payload.username, &payload.password) {
         return Err(AppError::Unauthorized);
     }
 
@@ -376,7 +356,10 @@ async fn login(State(state): State<AppState>, Json(payload): Json<Credentials>) 
     Ok(Json(AuthResponse { token }))
 }
 
-async fn list_videos(_auth: AuthBearer, State(pool): State<PgPool>) -> Result<Json<ApiVideosResponse>, AppError> {
+async fn list_videos(
+    _auth: AuthBearer,
+    State(pool): State<PgPool>,
+) -> Result<Json<ApiVideosResponse>, AppError> {
     let records = sqlx::query(
         "SELECT id, youtube_id, title, category, views_per_hour, duration_seconds, published_at, notes FROM videos ORDER BY views_per_hour DESC",
     )
@@ -403,7 +386,6 @@ async fn refresh_videos(
     Json(payload): Json<Vec<VideoPayload>>,
 ) -> Result<Json<ApiMessage>, AppError> {
     for item in payload {
-        let is_short = item.duration_seconds <= 60;
         let id = uuid::Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO videos (id, youtube_id, title, category, views_per_hour, duration_seconds, published_at, notes)
@@ -430,8 +412,6 @@ async fn refresh_videos(
         .bind(chrono::Utc::now())
         .execute(&state.pool)
         .await?;
-
-        info!("upserted video {} short={}", item.youtube_id, is_short);
     }
 
     Ok(Json(ApiMessage {
@@ -456,33 +436,38 @@ async fn update_note(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct YoutubeSearchItem {
     id: YoutubeVideoId,
     snippet: YoutubeSnippet,
-    contentDetails: Option<YoutubeContentDetails>,
+    content_details: Option<YoutubeContentDetails>,
     statistics: Option<YoutubeStatistics>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct YoutubeVideoId {
-    videoId: Option<String>,
+    video_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct YoutubeSnippet {
     title: String,
-    categoryId: Option<String>,
-    publishedAt: String,
+    category_id: Option<String>,
+    published_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct YoutubeContentDetails {
     duration: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct YoutubeStatistics {
-    viewCount: Option<String>,
+    view_count: Option<String>,
 }
 
 #[async_trait]
@@ -535,7 +520,7 @@ mod tests {
     fn seed_user_configured_when_env_present() {
         std::env::set_var("APP_USERNAME", "demo");
         std::env::set_var("APP_PASSWORD", "averylongpassword!!");
-        std::env::set_var("APP_SECRET", "secret");
+        std::env::set_var("SECRET_KEY", "secret");
         let auth = AuthConfig::from_env().unwrap();
         assert!(auth.seed_user.is_some());
     }
@@ -554,29 +539,5 @@ mod tests {
             notes: None,
         };
         assert!(video.is_short);
-    }
-
-    #[tokio::test]
-    async fn login_succeeds_for_valid_credentials() {
-        std::env::set_var("APP_USERNAME", "demo");
-        std::env::set_var("APP_PASSWORD", "averylongpassword!!");
-        std::env::set_var("APP_SECRET", "secret");
-        let auth = AuthConfig::from_env().unwrap();
-        let state = AppState {
-            pool: PgPoolOptions::new()
-                .max_connections(1)
-                .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
-                .expect("lazy pool"),
-            auth: auth.clone(),
-            youtube: YoutubeConfig { api_key: "demo".into() },
-            http: Client::new(),
-        };
-
-        let creds = Credentials {
-            username: "demo".into(),
-            password: "averylongpassword!!".into(),
-        };
-        let response = login(State(state), Json(creds)).await.unwrap();
-        assert!(!response.token.is_empty());
     }
 }

@@ -1,18 +1,5 @@
 version: '3.9'
 services:
-  db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: viral
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./db/migrations:/docker-entrypoint-initdb.d
-
   backend:
     build:
       context: ./backend
@@ -20,8 +7,6 @@ services:
     env_file: .env
     environment:
       RUST_LOG: info
-    depends_on:
-      - db
     ports:
       - '4443:4443'
 
@@ -36,6 +21,3 @@ services:
       - '5173:4443'
     depends_on:
       - backend
-
-volumes:
-  pgdata:

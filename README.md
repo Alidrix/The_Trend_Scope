@@ -1,131 +1,81 @@
 # 🎥 Viral Radar – YouTube & TikTok (WIP)
 
-Un outil auto‑hébergé pour repérer et suivre les vidéos virales YouTube (TikTok à venir) avec stats, historique, filtres thématiques et notifications locales. Conçu pour un usage personnel sur port **4443** avec backend Axum + PostgreSQL et frontend SvelteKit.
-
-## ✨ Points forts
-- 🔐 Authentification par mot de passe (16+ caractères, support UTF‑8) avec JWT sécurisé
-- 📈 Classement par vues/heure, badge **Short** ≤ 60s, filtres par catégorie
-- 📝 Historique persistant, notes personnelles et rafraîchissement à la demande
-- 🔔 Notifications locales (toasts + panneau) avec activation/désactivation
-- 🐳 Déploiement Docker (backend, frontend, base PostgreSQL)
+Outil auto‑hébergé pour repérer et suivre les vidéos YouTube (TikTok à venir) via un backend Axum + Supabase/PostgreSQL et un frontend SvelteKit. Tout se lance en Docker avec `docker compose`.
 
 ## 🧱 Architecture
-```
-/backend        → Axum + sqlx + JWT, API REST /api/v1
-/frontend       → SvelteKit (pastel bleu/violet), login + dashboard + historique
-/db/migrations  → Schéma PostgreSQL (vidéos, stats, notes)
-Dockerfile      → Build multi-étapes (backend)
-frontend/Dockerfile → Build/preview SvelteKit
-Docker-compose.yml  → Orchestration backend/frontend/db (port 4443 exposé)
-.env.example    → Variables d'environnement
-```
+| Bloc | Détails |
+| --- | --- |
+| Backend | Axum + sqlx, JWT HMAC, connexion PostgreSQL hébergée sur Supabase |
+| Frontend | SvelteKit (build + preview), consomme l’API `/api/v1` |
+| Base | Tables `videos`, `video_stats`, `users` (script SQL dans `db/migrations/init.sql`) |
+| Conteneurs | `backend` (port 4443), `frontend` (port 5173) |
 
-## ⚙️ Pré-requis
-- Docker & Docker Compose
-- (Optionnel) Rust + Node 20 si vous voulez développer hors conteneur
+## ⚙️ Configuration environnement
+Copiez `.env.example` en `.env`, puis ajustez les valeurs si besoin :
 
-
-## ✅ Checklist « ça démarre du premier coup »
-
-Avant `docker compose up -d`, vérifiez :
-- `.env` est présent et bien rempli (`APP_USERNAME`, `APP_PASSWORD` ≥ 16 caractères, `APP_SECRET`, `YOUTUBE_API_KEY`, `DATABASE_URL`, `FRONTEND_ORIGIN`).
-- Le port `4443` n’est pas occupé (backend) et `5173` libre (frontend exposé).
-- Votre machine peut accéder à l’API YouTube (si le réseau bloque, le backend renverra un message d’erreur dans les logs).
-- Le volume Docker `pgdata` est vierge ou cohérent : si vous changez le schéma, lancez `docker compose down -v` pour repartir proprement.
-- Si vous développez hors Docker, installez les dépendances : `cargo build` dans `backend`, `npm install` dans `frontend`.
-
-## 🔑 Configuration
-1. Copier le modèle : `cp .env.example .env`
-2. Définir les variables ci‑dessous (mêmes noms pour Docker et le développement local) :
-
-| Variable | Description | Exemple |
+| Variable | Rôle | Valeur par défaut dans `.env.example` |
 | --- | --- | --- |
-| `YOUTUBE_API_KEY` | Clé API YouTube v3 | `AIza...` |
-| `APP_USERNAME` | Identifiant de connexion (UTF‑8) — optionnel (seed) | `admin` |
-| `APP_PASSWORD` | Mot de passe 16+ caractères (UTF‑8) — optionnel (seed) | `m0tDeP@55€安全` |
-| `APP_SECRET` | Secret JWT HMAC | `super-long-random-string` |
-| `FRONTEND_ORIGIN` | Origine autorisée pour les cookies/JWT | `http://localhost:5173` |
-| `DATABASE_URL` | Chaîne Postgres (par défaut `db` en Docker) | `postgres://postgres:postgres@db:5432/viral` |
+| `APP_USERNAME` | Identifiant du compte seed | `zakamon` |
+| `APP_PASSWORD` | Mot de passe seed (≥10 caractères) | `Azerty1234$` |
+| `SECRET_KEY` | Secret HMAC JWT (généré, voir ci‑dessous) | `08f0f56770086327107e33189b7e584d` |
+| `YOUTUBE_API_KEY` | Clé API YouTube v3 | `AIzaSyBTs5Y2tNY2ZvEB5FJgp_ED2QXb3djvRik` |
+| `SUPABASE_URL` | URL du projet Supabase | `https://ltxjjnzsphhprykuwwye.supabase.co` |
+| `SUPABASE_ANON_KEY` | Clé publique Supabase (utilisation front) | `…AR4MHCGy…` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé service pour exécuter les migrations | `…MTSelIYv…` |
+| `DATABASE_URL` | Chaîne Postgres Supabase | `postgresql://postgres:<service_role>@db.ltxjjnzsphhprykuwwye.supabase.co:5432/postgres` |
+| `REGIONS` | Liste des régions à scanner | `FR,US,ES` |
+| `THEMES` | Thèmes de recherche séparés par des virgules | `nourriture,voiture,business,drôle,influenceurs` |
+| `FRONTEND_ORIGIN` | Origine autorisée côté frontend | `http://localhost:5173` |
 
-💡 Si vous développez hors Docker, gardez les mêmes variables pour éviter les écarts entre environnements.
+### Générer un `SECRET_KEY`
+Vous pouvez régénérer une clé HMAC aléatoire en hexadécimal (64 caractères) :
 
-🤫 Tous les secrets sont centralisés dans `.env` (une seule édition suffit) : ni le backend ni le frontend ne demandent de re-saisir la clé YouTube ou les mots de passe ailleurs.
+| Commande | Description |
+| --- | --- |
+| `openssl rand -hex 32` | Génère un secret compatible JWT à copier dans `SECRET_KEY` |
 
-### Création de compte et clés privées
-- **Compte unique** : au premier démarrage, créez l’utilisateur directement depuis la page de login (bloc « Initialisation »). Le mot de passe est haché en base.
-=======
-🤫 Tous les secrets sont centralisés dans `.env` (une seule édition suffit) : ni le backend ni le frontend ne demandent de re-saisir la clé YouTube ou les mots de passe ailleurs.
+## 🗄️ Préparer Supabase
+1. Ouvrez l’onglet **SQL Editor** dans Supabase et exécutez le contenu de `db/migrations/init.sql` pour créer les tables.
+2. Vérifiez que la base est accessible via l’URL `DATABASE_URL` (rôle service). Gardez ce DSN dans `.env` pour le backend.
 
-### Création de compte et clés privées
-- **Compte unique** : au premier démarrage, créez l’utilisateur directement depuis la page de login (bloc « Initialisation »). Le mot de passe est haché en base.
-- **Seed optionnel** : si `APP_USERNAME` et `APP_PASSWORD` sont définis dans `.env`, le compte est créé automatiquement lors du boot si aucun utilisateur n’existe.
-- **API YouTube** : définissez `YOUTUBE_API_KEY` une seule fois dans `.env` pour l’API backend ; le frontend détecte sa présence et l’indique sur l’écran d’authentification.
-
-## 🚀 Déploiement rapide (Docker)
-```bash
+## 🚀 Lancer avec Docker (obligatoire)
+```
 docker compose build
 docker compose up -d
 ```
-- Backend : http://localhost:4443/api/v1
-- Frontend : http://localhost:5173 (cible l’API backend)
-- Postgres : volume `pgdata`, migrations appliquées depuis `db/migrations`
 
-🌐 Accès : l’UI (panel d’authentification + création de compte) est servie par le frontend sur **http://localhost:5173**. Le port **4443** correspond uniquement à l’API backend ; taper http://localhost:4443 affichera l’API, pas l’interface.
+| Service | URL | Notes |
+| --- | --- | --- |
+| Backend | http://localhost:4443/api/v1 | Auth + vidéos |
+| Frontend | http://localhost:5173 | Tableau de bord, login |
 
-### Vérifier / arrêter
-```bash
-docker compose ps
+Pour suivre les logs :
+```
 docker compose logs -f backend
-# …
-docker compose down        # stop
-docker compose down -v     # stop + reset base
+```
+Arrêter les services :
+```
+docker compose down
 ```
 
-## 🔧 Résolution des conflits Git
-- La plupart des conflits venaient des mêmes sections modifiées dans plusieurs branches (README, login, auth backend). Chaque
-  branche utilisait parfois des noms de variables différents (`APP_*` vs `AUTH_*`), ce qui a multiplié les divergences.
-- Pour éviter de nouveaux conflits :
-  - Gardez la nomenclature actuelle des variables (`APP_USERNAME`, `APP_PASSWORD`, `APP_SECRET`, `YOUTUBE_API_KEY`, `DATABASE_URL`,
-    `FRONTEND_ORIGIN`).
-  - Mettez à jour votre branche locale régulièrement : `git fetch origin && git rebase origin/main` (ou `git pull --rebase`).
-  - Si un conflit survient, conservez la version la plus récente du README (tableau des variables + checklist) et du flux
-    d’authentification (création de compte unique + détection de clé API), puis retestez avec `cargo test -q --manifest-path
-    backend/Cargo.toml`.
-
+## 🔐 Authentification
+- Si aucun utilisateur n’existe, le compte seed (`APP_USERNAME`/`APP_PASSWORD`) est créé automatiquement au démarrage.
+- Les mots de passe doivent contenir au moins 10 caractères.
 
 ## 🧪 Tests
-Backend (dans /backend) :
-```bash
+Backend (hors Docker, nécessite Rust) :
+```
 cargo test
 ```
-Frontend (dans /frontend) :
-```bash
+
+Frontend (hors Docker, nécessite Node 20) :
+```
 npm install
 npm run check
-npm run test              # Playwright ou tests Svelte
 ```
 
-## 🛠️ Développement local (sans Docker)
-Backend :
-```bash
-cd backend
-cp ../.env.example .env    # ou configurez vos variables
-cargo run
-```
-Frontend :
-```bash
-cd frontend
-npm install
-npm run dev -- --host
-```
-Assurez-vous que `VITE_API_BASE` pointe vers votre backend (par ex. http://localhost:4443/api/v1).
-
-## 🔮 Roadmap
-- Intégration TikTok Trends
-- Dashboard analytics avancé
-- Export CSV/JSON
-- Notifications Telegram/email
-- Mode multi-comptes et thèmes light/dark
-
-## 🤝 Contribution
-Projet pensé pour un usage personnel ; issues et suggestions bienvenues. Merci de respecter le style pastel et l’auth unique lors des contributions.
+## 📚 Sources utilisées
+| Sujet | Lien |
+| --- | --- |
+| SQL Supabase / Postgres distant | https://supabase.com/docs/guides/database/connecting-to-postgres |
+| Génération de secrets avec OpenSSL | https://www.openssl.org/docs/manmaster/man1/openssl-rand.html |
