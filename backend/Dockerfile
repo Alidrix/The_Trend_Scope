@@ -2,7 +2,8 @@ FROM rust:1.79 AS builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock* ./
 COPY src ./src
-RUN cargo build --release
+# Use the lockfile to avoid pulling in newer unstable dependencies during builds
+RUN cargo build --release --locked
 
 FROM debian:bookworm-slim
 WORKDIR /app
