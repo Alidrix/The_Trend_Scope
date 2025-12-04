@@ -6,6 +6,7 @@ Outil auto‑hébergé pour repérer et suivre les vidéos YouTube (TikTok à ve
 | Bloc | Détails |
 | --- | --- |
 | Backend | Axum + sqlx, JWT HMAC, connexion PostgreSQL hébergée sur Supabase (TLS forcé) |
+| Backend | Axum + sqlx, JWT HMAC, connexion PostgreSQL hébergée sur Supabase |
 | Frontend | SvelteKit (build + preview), consomme l’API `/api/v1` |
 | Base | Tables `videos`, `video_stats`, `users` (script SQL dans `db/migrations/init.sql`) |
 | Conteneurs | `backend` (port 4443), `frontend` (port 5173) |
@@ -23,6 +24,7 @@ Copiez `.env.example` en `.env`, puis ajustez les valeurs si besoin :
 | `SUPABASE_ANON_KEY` | Clé publique Supabase (utilisation front) | `…AR4MHCGy…` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé service pour exécuter les migrations | `…MTSelIYv…` |
 | `DATABASE_URL` | Chaîne Postgres Supabase (ajoutez `sslmode=require`) | `postgresql://postgres:<service_role>@db.ltxjjnzsphhprykuwwye.supabase.co:5432/postgres?sslmode=require` |
+| `DATABASE_URL` | Chaîne Postgres Supabase | `postgresql://postgres:<service_role>@db.ltxjjnzsphhprykuwwye.supabase.co:5432/postgres` |
 | `REGIONS` | Liste des régions à scanner | `FR,US,ES` |
 | `THEMES` | Thèmes de recherche séparés par des virgules | `nourriture,voiture,business,drôle,influenceurs` |
 | `FRONTEND_ORIGIN` | Origine autorisée côté frontend | `http://localhost:5173` |
@@ -37,6 +39,8 @@ Vous pouvez régénérer une clé HMAC aléatoire en hexadécimal (64 caractère
 ## 🗄️ Préparer Supabase
 1. Ouvrez l’onglet **SQL Editor** dans Supabase et exécutez le contenu de `db/migrations/init.sql` pour créer les tables (le backend exécute aussi ce script au démarrage s’il manque du schéma).
 2. Vérifiez que la base est accessible via l’URL `DATABASE_URL` (rôle service). Gardez ce DSN dans `.env` pour le backend ; ajoutez `sslmode=require` pour Supabase.
+1. Ouvrez l’onglet **SQL Editor** dans Supabase et exécutez le contenu de `db/migrations/init.sql` pour créer les tables.
+2. Vérifiez que la base est accessible via l’URL `DATABASE_URL` (rôle service). Gardez ce DSN dans `.env` pour le backend.
 
 ## 🚀 Lancer avec Docker (obligatoire)
 ```
