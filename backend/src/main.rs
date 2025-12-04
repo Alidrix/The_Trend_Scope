@@ -216,6 +216,8 @@ async fn main() -> Result<(), AppError> {
         .init();
 
     let database_url = normalize_database_url()?;
+    let database_url = std::env::var("DATABASE_URL")
+        .map_err(|_| AppError::Config("DATABASE_URL is required".into()))?;
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
