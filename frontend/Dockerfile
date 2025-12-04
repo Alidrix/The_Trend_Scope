@@ -1,7 +1,7 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install --silent || true
+RUN npm ci --omit=dev=false
 COPY . .
 ENV PORT=5173
 RUN npm run build

@@ -23,14 +23,6 @@
       console.error(err);
     }
   });
-  import { login } from '$lib/api';
-  import { token } from '$lib/stores/auth';
-  import { pushNotification } from '$lib/stores/notifications';
-
-  let username = '';
-  let password = '';
-  let error: string | null = null;
-  let loading = false;
 
   async function handleLogin(event: Event) {
     event.preventDefault();
@@ -77,11 +69,20 @@
       <p class="badge">Sécurité</p>
       <h1>Connexion</h1>
       <p class="lede">Authentification unique, mot de passe robuste (16+ caractères).</p>
-      <form on:submit|preventDefault={handleLogin}>
-        <label>Identifiant</label>
-        <input required bind:value={username} placeholder="admin" />
-        <label>Mot de passe</label>
-        <input required type="password" bind:value={password} placeholder="••••••••" minlength="16" />
+      <form on:submit|preventDefault={handleLogin} aria-label="Connexion">
+        <label for="login-username">Identifiant</label>
+        <input id="login-username" required bind:value={username} placeholder="admin" />
+
+        <label for="login-password">Mot de passe</label>
+        <input
+          id="login-password"
+          required
+          type="password"
+          bind:value={password}
+          placeholder="••••••••"
+          minlength="16"
+        />
+
         {#if error && !needsSetup}
           <p class="error">{error}</p>
         {/if}
@@ -95,17 +96,20 @@
       <p class="badge ghost">Initialisation</p>
       <h2>Créer le compte privé</h2>
       <p class="lede">Un seul utilisateur. Mot de passe 16+ caractères, stocké chiffré en base.</p>
-      <form on:submit|preventDefault={handleRegister}>
-        <label>Identifiant</label>
-        <input required bind:value={registerUsername} placeholder="mon_compte" />
-        <label>Mot de passe</label>
+      <form on:submit|preventDefault={handleRegister} aria-label="Création de compte">
+        <label for="register-username">Identifiant</label>
+        <input id="register-username" required bind:value={registerUsername} placeholder="mon_compte" />
+
+        <label for="register-password">Mot de passe</label>
         <input
+          id="register-password"
           required
           type="password"
           bind:value={registerPassword}
           placeholder="mot de passe solide"
           minlength="16"
         />
+
         {#if error && needsSetup}
           <p class="error">{error}</p>
         {/if}
@@ -121,23 +125,6 @@
         {/if}
       </p>
     </div>
-</script>
-
-<section class="login">
-  <div class="card">
-    <p class="badge">Sécurité</p>
-    <h1>Connexion</h1>
-    <p class="lede">Authentification unique, mot de passe robuste (16+ caractères).</p>
-    <form on:submit|preventDefault={handleLogin}>
-      <label>Identifiant</label>
-      <input required bind:value={username} placeholder="admin" />
-      <label>Mot de passe</label>
-      <input required type="password" bind:value={password} placeholder="••••••••" minlength="16" />
-      {#if error}
-        <p class="error">{error}</p>
-      {/if}
-      <button class:loading={loading} disabled={loading} type="submit">{loading ? 'Connexion...' : 'Entrer'}</button>
-    </form>
   </div>
 </section>
 
@@ -173,13 +160,6 @@
   h2 {
     margin: 0.5rem 0 0.25rem;
   }
-    max-width: 420px;
-    width: 100%;
-    border: 1px solid rgba(95, 107, 255, 0.08);
-  }
-  h1 {
-    margin: 0.5rem 0;
-  }
   .badge {
     padding: 0.35rem 0.75rem;
     border-radius: 999px;
@@ -198,50 +178,36 @@
   form {
     display: grid;
     gap: 0.75rem;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
+  }
+  label {
+    font-weight: 600;
   }
   input {
     padding: 0.85rem 1rem;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    background: #f7f8ff;
+    border: 1px solid rgba(95, 107, 255, 0.16);
     font-size: 1rem;
-  }
-  label {
-    font-weight: 700;
-  }
-  .error {
-    color: #e76f51;
-    margin: 0;
   }
   button {
     background: linear-gradient(135deg, #5f6bff, #9c6bff);
     color: white;
     border: none;
-    padding: 0.9rem 1.2rem;
+    padding: 0.9rem 1.1rem;
     border-radius: 12px;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
-    transition: transform 120ms ease;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
   button.loading {
-    opacity: 0.7;
-    cursor: wait;
+    opacity: 0.8;
+    cursor: progress;
   }
-  button:hover {
-    transform: translateY(-1px);
+  .error {
+    color: #c0392b;
   }
   .hint {
     margin-top: 1rem;
-    color: #2f3146;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 0.75rem 0.9rem;
-    border-radius: 12px;
-    border: 1px dashed rgba(95, 107, 255, 0.3);
-  }
-  code {
-    background: rgba(0, 0, 0, 0.05);
-    padding: 0.1rem 0.3rem;
-    border-radius: 6px;
+    color: #4b4f6f;
   }
 </style>

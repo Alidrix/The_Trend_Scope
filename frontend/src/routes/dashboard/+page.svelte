@@ -90,8 +90,8 @@
 </section>
 
 <section class="filters">
-  <label>Filtrer par catégorie</label>
-  <select bind:value={category} on:change={applyFilter}>
+  <label for="category-filter">Filtrer par catégorie</label>
+  <select id="category-filter" bind:value={category} on:change={applyFilter}>
     <option>Toutes</option>
     {#each Array.from(new Set(videos.map((v) => v.category))) as cat}
       <option>{cat}</option>
