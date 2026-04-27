@@ -6,11 +6,15 @@ mod repositories {
 }
 mod routes {
     pub mod auth;
+    pub mod billing;
     pub mod health;
     pub mod notes;
+    pub mod plans;
+    pub mod radar;
     pub mod videos;
 }
 mod models {
+    pub mod plan;
     pub mod video;
 }
 mod services {
@@ -31,8 +35,11 @@ use error::AppError;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use routes::{
     auth::{auth_status, login, register, Claims},
+    billing::billing_status,
     health::health,
     notes::update_note,
+    plans::list_plans,
+    radar::daily_radar,
     videos::{list_videos, refresh_videos, scan_videos},
 };
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -72,31 +79,35 @@ async fn main() -> Result<(), AppError> {
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/status", get(auth_status))
         .route("/api/v1/auth/register", post(register))
+        .route("/api/v1/plans", get(list_plans))
+        .route("/api/v1/billing/status", get(billing_status))
+        .route(
+            "/api/v1/radar/daily",
+            get(|auth: AuthBearer, state: State<AppState>| async move {
+                daily_radar(auth, state).await
+            }),
+        )
         .route(
             "/api/v1/videos",
-            get(|auth: AuthBearer, state: State<AppState>| async move {
-                let _ = auth;
-                list_videos(state).await
-            })
+            get(
+                |_auth: AuthBearer, state: State<AppState>| async move { list_videos(state).await },
+            )
             .post(
-                |auth: AuthBearer, state: State<AppState>, payload| async move {
-                    let _ = auth;
+                |_auth: AuthBearer, state: State<AppState>, payload| async move {
                     refresh_videos(state, payload).await
                 },
             ),
         )
         .route(
             "/api/v1/videos/scan",
-            post(|auth: AuthBearer, state: State<AppState>| async move {
-                let _ = auth;
-                scan_videos(state).await
-            }),
+            post(
+                |_auth: AuthBearer, state: State<AppState>| async move { scan_videos(state).await },
+            ),
         )
         .route(
             "/api/v1/notes",
             post(
-                |auth: AuthBearer, state: State<AppState>, payload| async move {
-                    let _ = auth;
+                |_auth: AuthBearer, state: State<AppState>, payload| async move {
                     update_note(state, payload).await
                 },
             ),
@@ -164,17 +175,21 @@ where
 
         let token = value[7..].trim();
         let config = AuthConfig::from_ref(state);
-        decode::<Claims>(
+        let decoded = decode::<Claims>(
             token,
             &DecodingKey::from_secret(config.jwt_secret.as_bytes()),
             &Validation::default(),
         )
         .map_err(|_| AppError::Unauthorized)?;
-        Ok(AuthBearer)
+        Ok(AuthBearer {
+            sub: decoded.claims.sub,
+        })
     }
 }
 
-struct AuthBearer;
+pub struct AuthBearer {
+    pub sub: String,
+}
 
 #[cfg(test)]
 mod tests {

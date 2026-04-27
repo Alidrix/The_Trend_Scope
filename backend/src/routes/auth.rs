@@ -2,7 +2,7 @@ use axum::{extract::State, Json};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::AppError, state::AppState};
+use crate::{error::AppError, models::plan::PlanTier, state::AppState};
 
 const MIN_PASSWORD_LENGTH: usize = 10;
 
@@ -21,6 +21,7 @@ pub struct RegisterPayload {
 #[derive(Debug, Serialize)]
 pub struct AuthResponse {
     pub token: String,
+    pub plan: PlanTier,
 }
 
 #[derive(Debug, Serialize)]
@@ -56,20 +57,24 @@ pub async fn register(
         )));
     }
 
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
-        .fetch_one(&state.pool)
-        .await?;
-    if count > 0 {
+    let username_exists: Option<String> =
+        sqlx::query_scalar("SELECT username FROM users WHERE username = $1")
+            .bind(&payload.username)
+            .fetch_optional(&state.pool)
+            .await?;
+    if username_exists.is_some() {
         return Err(AppError::Conflict);
     }
 
     let password_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)?;
-    sqlx::query("INSERT INTO users (id, username, password_hash) VALUES ($1, $2, $3)")
-        .bind(uuid::Uuid::new_v4())
-        .bind(&payload.username)
-        .bind(password_hash)
-        .execute(&state.pool)
-        .await?;
+    sqlx::query(
+        "INSERT INTO users (id, username, password_hash, plan) VALUES ($1, $2, $3, 'free')",
+    )
+    .bind(uuid::Uuid::new_v4())
+    .bind(&payload.username)
+    .bind(password_hash)
+    .execute(&state.pool)
+    .await?;
 
     Ok(Json(crate::error::ApiMessage {
         message: "Compte créé, vous pouvez vous connecter".into(),
@@ -80,11 +85,12 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<Credentials>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    let Some(password_hash) =
-        sqlx::query_scalar::<_, String>("SELECT password_hash FROM users WHERE username = $1")
-            .bind(&payload.username)
-            .fetch_optional(&state.pool)
-            .await?
+    let Some((password_hash, plan)) = sqlx::query_as::<_, (String, PlanTier)>(
+        "SELECT password_hash, plan FROM users WHERE username = $1",
+    )
+    .bind(&payload.username)
+    .fetch_optional(&state.pool)
+    .await?
     else {
         return Err(AppError::Unauthorized);
     };
@@ -105,5 +111,5 @@ pub async fn login(
     )
     .map_err(|_| AppError::Internal)?;
 
-    Ok(Json(AuthResponse { token }))
+    Ok(Json(AuthResponse { token, plan }))
 }

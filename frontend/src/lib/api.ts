@@ -45,11 +45,16 @@ export function fetchVideos() {
   return request('/videos');
 }
 
-export function refreshVideos(payload: unknown) {
-  return request('/videos', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
+export function fetchDailyRadar() {
+  return request('/radar/daily');
+}
+
+export function fetchPlans() {
+  return request('/plans');
+}
+
+export function fetchBillingStatus() {
+  return request('/billing/status');
 }
 
 export function scanVideos() {

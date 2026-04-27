@@ -7,12 +7,12 @@
     :global(body) {
       margin: 0;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: radial-gradient(circle at 10% 20%, #111827, #090b13 60%);
-      color: var(--color-text);
+      background: #f5f7fb;
+      color: #101828;
     }
     :global(*) { box-sizing: border-box; }
     :global(a) {
-      color: var(--color-tiktok-cyan);
+      color: #0f172a;
       text-decoration: none;
     }
   </style>

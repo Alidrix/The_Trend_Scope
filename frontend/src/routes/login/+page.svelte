@@ -34,8 +34,8 @@
     try {
       const result = await login(username, password);
       token.set(result.token);
-      pushNotification({ id: crypto.randomUUID(), title: 'Connecté', body: 'Bienvenue sur le dashboard', level: 'success' });
-      goto('/dashboard');
+      pushNotification({ id: crypto.randomUUID(), title: 'Connecté', body: 'Bienvenue sur votre Radar du jour', level: 'success' });
+      goto('/radar');
     } catch (err) {
       error = (err as Error).message;
     } finally {
