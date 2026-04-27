@@ -52,6 +52,12 @@ export function refreshVideos(payload: unknown) {
   });
 }
 
+export function scanVideos() {
+  return request('/videos/scan', {
+    method: 'POST'
+  });
+}
+
 export function saveNote(video_id: string, notes: string) {
   return request('/notes', {
     method: 'POST',
