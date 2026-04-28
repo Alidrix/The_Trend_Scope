@@ -13,7 +13,7 @@ pub async fn ensure_seed_user(pool: &PgPool, config: &AuthConfig) -> Result<(), 
     if count == 0 {
         let password_hash = bcrypt::hash(&seed.password, bcrypt::DEFAULT_COST)?;
         sqlx::query(
-            "INSERT INTO users (id, username, password_hash, plan) VALUES ($1, $2, $3, 'free')",
+            "INSERT INTO users (id, username, password_hash, plan, role) VALUES ($1, $2, $3, 'studio', 'admin')",
         )
         .bind(uuid::Uuid::new_v4())
         .bind(&seed.username)

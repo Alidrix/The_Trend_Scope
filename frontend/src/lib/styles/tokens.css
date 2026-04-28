@@ -1,11 +1,30 @@
 :root {
-  --color-bg: #f5f7fb;
-  --color-surface: #ffffff;
-  --color-surface-soft: #eef2f8;
-  --color-text: #111827;
-  --color-muted: #6b7280;
-  --color-youtube: #e73141;
-  --color-tiktok-cyan: #25f4ee;
-  --color-tiktok-pink: #fe2c55;
+  --bg: #f7f8fb;
+  --surface: #ffffff;
+  --surface-soft: #f0f3f8;
+  --text: #111827;
+  --muted: #667085;
+  --border: #e3e8ef;
+  --youtube: #ff0033;
+  --tiktok-cyan: #25f4ee;
+  --tiktok-pink: #fe2c55;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-youtube: var(--youtube);
+  --color-tiktok-cyan: var(--tiktok-cyan);
+  --color-tiktok-pink: var(--tiktok-pink);
   --radius-card: 16px;
+}
+
+html[data-theme='dark'] {
+  --bg: #080b12;
+  --surface: #101622;
+  --surface-soft: #182233;
+  --text: #f8fafc;
+  --muted: #9aa4b2;
+  --border: #283447;
 }

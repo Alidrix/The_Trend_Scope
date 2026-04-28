@@ -16,6 +16,16 @@ pub struct Credentials {
 pub struct RegisterPayload {
     pub username: String,
     pub password: String,
+    pub display_name: Option<String>,
+    pub country: Option<String>,
+    pub timezone: Option<String>,
+    pub profile_type: Option<String>,
+    pub objective: Option<String>,
+    pub platforms: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
+    pub accept_terms: bool,
+    pub accept_privacy: bool,
+    pub marketing_opt_in: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,7 +53,7 @@ pub async fn auth_status(State(state): State<AppState>) -> Result<Json<AuthStatu
 
     Ok(Json(AuthStatus {
         needs_setup: count == 0,
-        has_api_key: !state.youtube.api_key.is_empty(),
+        has_api_key: !state.config.youtube.api_key.is_empty(),
     }))
 }
 
@@ -51,6 +61,12 @@ pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterPayload>,
 ) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    if !payload.accept_terms || !payload.accept_privacy {
+        return Err(AppError::BadRequest(
+            "L'acceptation des CGU et de la politique de confidentialité est obligatoire".into(),
+        ));
+    }
+
     if payload.password.chars().count() < MIN_PASSWORD_LENGTH {
         return Err(AppError::BadRequest(format!(
             "Le mot de passe doit contenir au moins {MIN_PASSWORD_LENGTH} caractères"
@@ -66,13 +82,47 @@ pub async fn register(
         return Err(AppError::Conflict);
     }
 
+    let user_id = uuid::Uuid::new_v4();
     let password_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)?;
     sqlx::query(
-        "INSERT INTO users (id, username, password_hash, plan) VALUES ($1, $2, $3, 'free')",
+        "INSERT INTO users (id, username, password_hash, plan, role) VALUES ($1, $2, $3, 'free', 'user')",
     )
-    .bind(uuid::Uuid::new_v4())
+    .bind(user_id)
     .bind(&payload.username)
     .bind(password_hash)
+    .execute(&state.pool)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO user_profiles (user_id, display_name, country, timezone, profile_type)
+         VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(user_id)
+    .bind(payload.display_name)
+    .bind(payload.country)
+    .bind(payload.timezone)
+    .bind(payload.profile_type)
+    .execute(&state.pool)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO user_preferences (user_id, objective, categories, platforms)
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(user_id)
+    .bind(payload.objective)
+    .bind(payload.categories.unwrap_or_default())
+    .bind(payload.platforms.unwrap_or_default())
+    .execute(&state.pool)
+    .await?;
+
+    let marketing = payload.marketing_opt_in.unwrap_or(false);
+    sqlx::query(
+        "INSERT INTO consents (user_id, consent_type, granted, version)
+         VALUES ($1, 'terms', true, 'v1'), ($1, 'privacy', true, 'v1'), ($1, 'marketing', $2, 'v1')",
+    )
+    .bind(user_id)
+    .bind(marketing)
     .execute(&state.pool)
     .await?;
 
@@ -107,7 +157,7 @@ pub async fn login(
     let token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(state.auth.jwt_secret.as_bytes()),
+        &EncodingKey::from_secret(state.config.auth.jwt_secret.as_bytes()),
     )
     .map_err(|_| AppError::Internal)?;
 
