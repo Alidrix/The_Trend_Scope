@@ -90,10 +90,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4443/api/v1/health"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 12
+      start_period: 45s
 
   worker:
     build:
@@ -124,7 +124,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
 
 volumes:
   postgres_data:
