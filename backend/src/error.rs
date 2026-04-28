@@ -15,6 +15,8 @@ pub enum AppError {
     Unauthorized,
     #[error("bad request: {0}")]
     BadRequest(String),
+    #[error("forbidden")]
+    Forbidden,
     #[error("conflict")]
     Conflict,
     #[error("database error: {0}")]
@@ -25,6 +27,8 @@ pub enum AppError {
     Hash(#[from] bcrypt::BcryptError),
     #[error("network error: {0}")]
     Network(#[from] reqwest::Error),
+    #[error("redis error: {0}")]
+    Redis(#[from] redis::RedisError),
 }
 
 impl IntoResponse for AppError {
@@ -33,11 +37,13 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Conflict => StatusCode::CONFLICT,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::Config(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Hash(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Network(_) => StatusCode::BAD_GATEWAY,
+            AppError::Redis(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         (

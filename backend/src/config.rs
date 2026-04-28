@@ -14,6 +14,48 @@ pub struct AuthConfig {
     pub seed_user: Option<SeedUser>,
 }
 
+#[derive(Clone)]
+pub struct DatabaseConfig {
+    pub database_url: String,
+}
+
+#[derive(Clone)]
+pub struct RedisConfig {
+    pub redis_url: String,
+}
+
+#[derive(Clone)]
+pub struct NatsConfig {
+    pub nats_url: String,
+}
+
+#[derive(Clone)]
+pub struct ClickHouseConfig {
+    pub url: String,
+    pub database: String,
+    pub user: String,
+    pub password: String,
+}
+
+#[derive(Clone)]
+pub struct YoutubeConfig {
+    pub api_key: String,
+    pub regions: Vec<String>,
+    pub themes: Vec<String>,
+}
+
+#[derive(Clone)]
+pub struct AppConfig {
+    pub env: String,
+    pub frontend_origin: String,
+    pub database: DatabaseConfig,
+    pub redis: RedisConfig,
+    pub nats: NatsConfig,
+    pub clickhouse: ClickHouseConfig,
+    pub youtube: YoutubeConfig,
+    pub auth: AuthConfig,
+}
+
 impl AuthConfig {
     pub fn from_env() -> Result<Self, AppError> {
         let jwt_secret = std::env::var("SECRET_KEY")
@@ -40,13 +82,6 @@ impl AuthConfig {
             seed_user,
         })
     }
-}
-
-#[derive(Clone)]
-pub struct YoutubeConfig {
-    pub api_key: String,
-    pub regions: Vec<String>,
-    pub themes: Vec<String>,
 }
 
 impl YoutubeConfig {
@@ -82,8 +117,40 @@ pub fn normalize_database_url() -> Result<String, AppError> {
     if !url.contains("sslmode=") {
         let separator = if url.contains('?') { '&' } else { '?' };
         url.push(separator);
-        url.push_str("sslmode=require");
+        url.push_str("sslmode=disable");
     }
 
     Ok(url)
+}
+
+impl AppConfig {
+    pub fn from_env() -> Result<Self, AppError> {
+        Ok(Self {
+            env: std::env::var("APP_ENV").unwrap_or_else(|_| "local".to_string()),
+            frontend_origin: std::env::var("FRONTEND_ORIGIN")
+                .unwrap_or_else(|_| "http://localhost:5173".to_string()),
+            database: DatabaseConfig {
+                database_url: normalize_database_url()?,
+            },
+            redis: RedisConfig {
+                redis_url: std::env::var("REDIS_URL")
+                    .unwrap_or_else(|_| "redis://redis:6379".to_string()),
+            },
+            nats: NatsConfig {
+                nats_url: std::env::var("NATS_URL")
+                    .unwrap_or_else(|_| "nats://nats:4222".to_string()),
+            },
+            clickhouse: ClickHouseConfig {
+                url: std::env::var("CLICKHOUSE_URL")
+                    .unwrap_or_else(|_| "http://clickhouse:8123".to_string()),
+                database: std::env::var("CLICKHOUSE_DATABASE")
+                    .unwrap_or_else(|_| "viral_analytics".to_string()),
+                user: std::env::var("CLICKHOUSE_USER").unwrap_or_else(|_| "viral".to_string()),
+                password: std::env::var("CLICKHOUSE_PASSWORD")
+                    .unwrap_or_else(|_| "viral".to_string()),
+            },
+            youtube: YoutubeConfig::from_env(),
+            auth: AuthConfig::from_env()?,
+        })
+    }
 }

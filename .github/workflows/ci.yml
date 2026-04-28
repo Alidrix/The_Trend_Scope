@@ -37,10 +37,28 @@ jobs:
       - run: npm run check
       - run: npm run build
 
-  docker:
+  docker-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Prepare env
         run: cp .env.example .env
-      - run: docker compose build
+      - name: Build stack
+        run: docker compose build --no-cache
+      - name: Start stack
+        run: docker compose up -d
+      - name: Wait for backend health
+        run: |
+          for i in {1..40}; do
+            if curl -fsS http://localhost:4443/api/v1/health; then
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose logs
+          exit 1
+      - name: Auth status
+        run: curl -fsS http://localhost:4443/api/v1/auth/status
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v

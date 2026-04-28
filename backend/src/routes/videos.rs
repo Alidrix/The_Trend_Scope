@@ -6,13 +6,17 @@ use crate::{
     error::{ApiMessage, AppError},
     models::video::{ApiVideosResponse, NewVideo, ScanResponse, Video, VideoPayload},
     repositories::videos::{insert_video_stat, upsert_video},
-    services::youtube::scan_theme_region,
+    services::{access::ensure_admin, youtube::scan_theme_region},
     state::AppState,
+    AuthBearer,
 };
 
 pub async fn list_videos(
+    auth: AuthBearer,
     State(state): State<AppState>,
 ) -> Result<Json<ApiVideosResponse>, AppError> {
+    ensure_admin(&state.pool, &auth).await?;
+
     let records = sqlx::query(
         "SELECT id, youtube_id, title, category, region, thumbnail_url, channel_title, description, url, views_per_hour, duration_seconds, published_at, notes FROM videos ORDER BY views_per_hour DESC",
     )
@@ -24,9 +28,12 @@ pub async fn list_videos(
 }
 
 pub async fn refresh_videos(
+    auth: AuthBearer,
     State(state): State<AppState>,
     Json(payload): Json<Vec<VideoPayload>>,
 ) -> Result<Json<ApiMessage>, AppError> {
+    ensure_admin(&state.pool, &auth).await?;
+
     for item in payload {
         let candidate = NewVideo {
             youtube_id: item.youtube_id,
@@ -51,7 +58,12 @@ pub async fn refresh_videos(
     }))
 }
 
-pub async fn scan_videos(State(state): State<AppState>) -> Result<Json<ScanResponse>, AppError> {
+pub async fn scan_videos(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+) -> Result<Json<ScanResponse>, AppError> {
+    ensure_admin(&state.pool, &auth).await?;
+
     if state.youtube.api_key.is_empty() {
         return Err(AppError::BadRequest(
             "YOUTUBE_API_KEY is missing in environment".into(),
