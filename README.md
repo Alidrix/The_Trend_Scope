@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="frontend/static/brand/trend-scope-logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="frontend/static/brand/trend-scope-logo-light.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/static/brand/trend-scope-logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="frontend/static/brand/trend-scope-logo-light.png">
     <img src="frontend/static/brand/trend-scope-logo-light.svg" alt="Trend Scope — Create Success" width="420">
   </picture>
 </p>
