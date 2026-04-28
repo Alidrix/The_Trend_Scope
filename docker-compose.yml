@@ -1,4 +1,59 @@
 services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer:1.24.1
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: app
+      DB_NAME: app
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 5432"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data"]
+    volumes:
+      - nats_data:/data
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    volumes:
+      - ch_data:/var/lib/clickhouse
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -6,15 +61,45 @@ services:
     env_file: .env
     environment:
       RUST_LOG: info
+      DATABASE_URL: postgresql://app:app@pgbouncer:5432/app
     ports:
       - '4443:4443'
     restart: unless-stopped
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      clickhouse:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4443/api/v1/health"]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgresql://app:app@pgbouncer:5432/app
+    command: ["sh", "-c", "echo 'worker ready'; sleep infinity"]
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+    restart: unless-stopped
 
   frontend:
     build:
@@ -29,3 +114,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  pg_data:
+  nats_data:
+  ch_data:
