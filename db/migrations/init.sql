@@ -138,6 +138,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     country TEXT,
     timezone TEXT,
     profile_type TEXT,
+    account_type TEXT,
+    company_name TEXT,
+    primary_goal TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -147,9 +150,18 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     objective TEXT,
     categories TEXT[] NOT NULL DEFAULT '{}',
     platforms TEXT[] NOT NULL DEFAULT '{}',
+    regions TEXT[] NOT NULL DEFAULT '{}',
+    followed_keywords TEXT[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS account_type TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS company_name TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS primary_goal TEXT;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS regions TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS followed_keywords TEXT[] NOT NULL DEFAULT '{}';
 
 CREATE TABLE IF NOT EXISTS consents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

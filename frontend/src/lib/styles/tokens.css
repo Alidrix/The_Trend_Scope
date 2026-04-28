@@ -5,19 +5,23 @@
   --text: #111827;
   --muted: #667085;
   --border: #e3e8ef;
+  --primary: #7c3aed;
+  --primary-soft: rgba(124, 58, 237, 0.12);
   --youtube: #ff0033;
   --tiktok-cyan: #25f4ee;
   --tiktok-pink: #fe2c55;
+  --radius-card: 18px;
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-soft: var(--surface-soft);
   --color-text: var(--text);
   --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
   --color-youtube: var(--youtube);
   --color-tiktok-cyan: var(--tiktok-cyan);
   --color-tiktok-pink: var(--tiktok-pink);
-  --radius-card: 16px;
 }
 
 html[data-theme='dark'] {
@@ -27,4 +31,6 @@ html[data-theme='dark'] {
   --text: #f8fafc;
   --muted: #9aa4b2;
   --border: #283447;
+  --primary: #8b5cf6;
+  --primary-soft: rgba(139, 92, 246, 0.16);
 }

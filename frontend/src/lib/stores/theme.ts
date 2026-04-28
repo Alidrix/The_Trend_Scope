@@ -24,10 +24,21 @@ export function applyTheme(value: Theme) {
   if (!browser) {
     return;
   }
+
   document.documentElement.setAttribute('data-theme', value);
   localStorage.setItem(STORAGE_KEY, value);
 }
 
 export function toggleTheme(current: Theme): Theme {
   return current === 'dark' ? 'light' : 'dark';
+}
+
+if (browser) {
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  media.addEventListener('change', () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      theme.set(media.matches ? 'dark' : 'light');
+    }
+  });
 }

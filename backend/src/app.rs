@@ -14,7 +14,7 @@ use crate::{
         billing::{billing_checkout, billing_portal, billing_status, billing_webhook},
         consents::{get_consents, post_consent},
         health::health,
-        me::{data_export_request, delete_request, get_me, patch_me},
+        me::{data_export_request, delete_request, get_me, patch_me, save_preferences},
         notes::update_note,
         plans::list_plans,
         radar::daily_radar,
@@ -75,6 +75,7 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
                 }),
             )
             .route("/api/v1/me", get(get_me).patch(patch_me))
+            .route("/api/v1/me/preferences", post(save_preferences))
             .route("/api/v1/me/consents", get(get_consents).post(post_consent))
             .route("/api/v1/me/data-export", post(data_export_request))
             .route("/api/v1/me/delete-request", post(delete_request))

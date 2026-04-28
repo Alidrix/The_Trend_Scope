@@ -34,16 +34,61 @@ export function authStatus() {
   return request('/auth/status', { method: 'GET' });
 }
 
-export function register(username: string, password: string, extra: Record<string, unknown> = {}) {
+export type RegisterPayload = {
+  email?: string;
+  username?: string;
+  password: string;
+  display_name?: string;
+  country?: string;
+  profile_type?: string;
+  accept_terms?: boolean;
+  accept_privacy?: boolean;
+  marketing_opt_in?: boolean;
+};
+
+export function register(username: string, password: string, extra?: Record<string, unknown>): Promise<unknown>;
+export function register(payload: RegisterPayload): Promise<unknown>;
+export function register(
+  usernameOrPayload: string | RegisterPayload,
+  password?: string,
+  extra: Record<string, unknown> = {}
+): Promise<unknown> {
+  if (typeof usernameOrPayload === 'string') {
+    return request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: usernameOrPayload,
+        password,
+        accept_terms: true,
+        accept_privacy: true,
+        ...extra
+      })
+    });
+  }
+
+  const payload = usernameOrPayload;
+  const username = payload.username ?? payload.email ?? '';
+
   return request('/auth/register', {
     method: 'POST',
     body: JSON.stringify({
+      ...payload,
       username,
-      password,
-      accept_terms: true,
-      accept_privacy: true,
-      ...extra
+      accept_terms: payload.accept_terms ?? true,
+      accept_privacy: payload.accept_privacy ?? true
     })
+  });
+}
+
+export async function saveOnboarding(payload: {
+  primary_goal: string;
+  platforms: string[];
+  categories: string[];
+  regions: string[];
+}) {
+  return request('/me/preferences', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 
