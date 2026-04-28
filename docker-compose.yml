@@ -74,6 +74,7 @@ services:
     env_file: .env
     environment:
       RUST_LOG: info
+    command: ["/app/api"]
     ports:
       - '4443:4443'
     depends_on:
@@ -97,7 +98,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
+    command: ["/app/worker"]
     env_file: .env
     depends_on:
       postgres:

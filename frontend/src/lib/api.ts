@@ -34,10 +34,16 @@ export function authStatus() {
   return request('/auth/status', { method: 'GET' });
 }
 
-export function register(username: string, password: string) {
+export function register(username: string, password: string, extra: Record<string, unknown> = {}) {
   return request('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({
+      username,
+      password,
+      accept_terms: true,
+      accept_privacy: true,
+      ...extra
+    })
   });
 }
 

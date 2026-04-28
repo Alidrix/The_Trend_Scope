@@ -53,11 +53,11 @@
 
 <style>
   .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-  aside { border-right: 1px solid #e3e8f3; padding: 1rem; background: #fff; }
+  aside { border-right: 1px solid #e3e8f3; padding: 1rem; background: var(--surface); }
   h1 { font-size: 1.1rem; }
   nav { display: grid; gap: .4rem; }
   nav a { padding: .55rem .7rem; border-radius: 10px; color: #334155; }
   nav a.active, nav a:hover { background: #eef2fa; }
   main { padding: 1.4rem; }
-  button { background: #e73141; color: white; border: none; border-radius: 10px; padding: .55rem .8rem; }
+  button { background: var(--youtube); color: white; border: none; border-radius: 10px; padding: .55rem .8rem; }
 </style>

@@ -29,10 +29,10 @@
 </section>
 
 <style>
-  .pricing { max-width: 1050px; margin: 0 auto; padding: 2rem 1rem; color: #111827; }
+  .pricing { max-width: 1050px; margin: 0 auto; padding: 2rem 1rem; color: var(--text); }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 1.2rem; }
-  article { background: #fff; border: 1px solid #e8ebf2; border-radius: 16px; padding: 1rem; position: relative; }
+  article { background: var(--surface); border: 1px solid #e8ebf2; border-radius: 16px; padding: 1rem; position: relative; }
   .recommended { border-color: #f43f5e; box-shadow: 0 8px 24px rgba(244,63,94,.15); }
-  .badge { position: absolute; top: -10px; right: 12px; background: #f43f5e; color: #fff; padding: .25rem .55rem; border-radius: 999px; font-size: .74rem; }
+  .badge { position: absolute; top: -10px; right: 12px; background: #f43f5e; color: var(--surface); padding: .25rem .55rem; border-radius: 999px; font-size: .74rem; }
   .price { font-size: 1.4rem; font-weight: 700; }
 </style>

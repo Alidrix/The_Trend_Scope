@@ -6,7 +6,7 @@ COPY backend/src ./backend/src
 COPY db ./db
 
 WORKDIR /app/backend
-RUN cargo build --release --locked
+RUN cargo build --release --locked --bin api --bin worker
 
 FROM debian:bookworm-slim
 WORKDIR /app
@@ -15,9 +15,10 @@ RUN apt-get update \
   && apt-get install -y libpq5 ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/backend/target/release/youtube_tiktok_backend /app/backend
+COPY --from=builder /app/backend/target/release/api /app/api
+COPY --from=builder /app/backend/target/release/worker /app/worker
 
 ENV RUST_LOG=info
 EXPOSE 4443
 
-CMD ["/app/backend"]
+CMD ["/app/api"]

@@ -6,13 +6,17 @@ use crate::{
     error::{ApiMessage, AppError},
     models::video::{ApiVideosResponse, NewVideo, ScanResponse, Video, VideoPayload},
     repositories::videos::{insert_video_stat, upsert_video},
+    services::access::ensure_admin,
     services::youtube::scan_theme_region,
     state::AppState,
+    AuthBearer,
 };
 
 pub async fn list_videos(
+    auth: AuthBearer,
     State(state): State<AppState>,
 ) -> Result<Json<ApiVideosResponse>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
     let records = sqlx::query(
         "SELECT id, youtube_id, title, category, region, thumbnail_url, channel_title, description, url, views_per_hour, duration_seconds, published_at, notes FROM videos ORDER BY views_per_hour DESC",
     )
@@ -24,9 +28,11 @@ pub async fn list_videos(
 }
 
 pub async fn refresh_videos(
+    auth: AuthBearer,
     State(state): State<AppState>,
     Json(payload): Json<Vec<VideoPayload>>,
 ) -> Result<Json<ApiMessage>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
     for item in payload {
         let candidate = NewVideo {
             youtube_id: item.youtube_id,
@@ -51,8 +57,12 @@ pub async fn refresh_videos(
     }))
 }
 
-pub async fn scan_videos(State(state): State<AppState>) -> Result<Json<ScanResponse>, AppError> {
-    if state.youtube.api_key.is_empty() {
+pub async fn scan_videos(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+) -> Result<Json<ScanResponse>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
+    if state.config.youtube.api_key.is_empty() {
         return Err(AppError::BadRequest(
             "YOUTUBE_API_KEY is missing in environment".into(),
         ));
@@ -61,10 +71,12 @@ pub async fn scan_videos(State(state): State<AppState>) -> Result<Json<ScanRespo
     let mut inserted = 0usize;
     let mut updated = 0usize;
 
-    for region in &state.youtube.regions {
-        for theme in &state.youtube.themes {
+    for region in &state.config.youtube.regions {
+        for theme in &state.config.youtube.themes {
             let scanned =
-                match scan_theme_region(&state.http, &state.youtube.api_key, region, theme).await {
+                match scan_theme_region(&state.http, &state.config.youtube.api_key, region, theme)
+                    .await
+                {
                     Ok(videos) => videos,
                     Err(err) => {
                         error!(region, theme, error = %err, "youtube scan failed for region/theme");

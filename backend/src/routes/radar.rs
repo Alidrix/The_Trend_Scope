@@ -7,6 +7,7 @@ use crate::{
         plan::{PlanLimits, PlanTier},
         video::Video,
     },
+    repositories::usage,
     state::AppState,
     AuthBearer,
 };
@@ -37,13 +38,7 @@ pub async fn daily_radar(
         .await?;
 
     let limits = PlanLimits::from_tier(tier);
-    let usage_today: i64 = sqlx::query_scalar(
-        "SELECT trends_viewed FROM user_usage_daily WHERE user_id = $1 AND usage_date = CURRENT_DATE",
-    )
-    .bind(user)
-    .fetch_optional(&state.pool)
-    .await?
-    .unwrap_or(0);
+    let usage_today = usage::count_unique_daily_views(&state.pool, user).await?;
 
     let fetch_limit = limits.daily_trend_limit.unwrap_or(100) as i64;
     let trends = sqlx::query(
@@ -60,10 +55,7 @@ pub async fn daily_radar(
         let visible = trends.into_iter().take(allowed).collect::<Vec<_>>();
         let blocked = allowed == 0;
         let msg = if blocked {
-            Some(
-                "Tu as consulté tes 3 tendances gratuites du jour. Passe en Pro pour débloquer toutes les tendances."
-                    .to_string(),
-            )
+            Some("Tu as consulté tes 3 tendances gratuites du jour. Passe en Pro pour débloquer toutes les tendances.".to_string())
         } else {
             None
         };
@@ -72,28 +64,17 @@ pub async fn daily_radar(
         (trends, false, None)
     };
 
-    let shown = visible_trends.len() as i64;
-    if shown > 0 {
-        sqlx::query(
-            r#"INSERT INTO user_usage_daily (user_id, usage_date, trends_viewed)
-               VALUES ($1, CURRENT_DATE, $2)
-               ON CONFLICT (user_id, usage_date)
-               DO UPDATE SET trends_viewed = user_usage_daily.trends_viewed + EXCLUDED.trends_viewed"#,
-        )
-        .bind(user)
-        .bind(shown)
-        .execute(&state.pool)
-        .await?;
-    }
+    let newly_counted = usage::mark_daily_views(&state.pool, user, &visible_trends).await? as i64;
+    let new_usage_today = usage_today + newly_counted;
 
     let remaining_today = limits
         .daily_trend_limit
-        .map(|limit| (limit as i64 - usage_today - shown).max(0));
+        .map(|limit| (limit as i64 - new_usage_today).max(0));
 
     Ok(Json(RadarResponse {
         plan: tier,
         limits,
-        usage_today: usage_today + shown,
+        usage_today: new_usage_today,
         remaining_today,
         trends: visible_trends,
         upgrade_required,

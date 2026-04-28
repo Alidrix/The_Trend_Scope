@@ -17,6 +17,8 @@ pub enum AppError {
     BadRequest(String),
     #[error("conflict")]
     Conflict,
+    #[error("forbidden")]
+    Forbidden,
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
     #[error("internal error")]
@@ -33,6 +35,7 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Conflict => StatusCode::CONFLICT,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::Config(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Internal => StatusCode::INTERNAL_SERVER_ERROR,

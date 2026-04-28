@@ -23,6 +23,11 @@ sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "macros", "uu
 async-trait = "0.1"
 http = "1"
 base64ct = "1.7.1"
+redis = { version = "0.25", features = ["tokio-comp"] }
+async-nats = "0.35"
+clickhouse = "0.12"
+time = "0.3"
+validator = { version = "0.18", features = ["derive"] }
 
 [dev-dependencies]
 axum = { version = "0.7", features = ["macros", "json"] }
