@@ -65,8 +65,16 @@ jobs:
           docker compose logs --no-color
           exit 1
 
+      - name: Smoke ready + metrics
+        run: |
+          curl -fsS http://localhost:4443/api/v1/ready
+          curl -fsS http://localhost:4443/metrics
+
       - name: Auth status
         run: curl -fsS http://localhost:4443/api/v1/auth/status
+
+      - name: README logo guard
+        run: ! grep -q "trend-scope-logo-light.svg" README.md
 
       - name: Stop stack
         if: always()

@@ -3,6 +3,7 @@ pub mod config;
 pub mod error;
 pub mod models {
     pub mod plan;
+    pub mod source;
     pub mod subscription;
     pub mod user;
     pub mod video;
@@ -12,9 +13,12 @@ pub mod repositories {
     pub mod alerts;
     pub mod audit_logs;
     pub mod consents;
+    pub mod email_logs;
+    pub mod email_verification;
     pub mod favorites;
     pub mod password_reset;
     pub mod reports;
+    pub mod stripe_events;
     pub mod subscriptions;
     pub mod usage;
     pub mod users;
@@ -50,6 +54,7 @@ pub mod services {
     pub mod stripe;
     pub mod youtube;
 }
+pub mod sources;
 pub mod state;
 
 use async_trait::async_trait;

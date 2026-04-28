@@ -19,6 +19,8 @@ pub enum AppError {
     Conflict,
     #[error("forbidden")]
     Forbidden,
+    #[error("too many requests")]
+    TooManyRequests,
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
     #[error("internal error")]
@@ -36,6 +38,7 @@ impl IntoResponse for AppError {
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Conflict => StatusCode::CONFLICT,
             AppError::Forbidden => StatusCode::FORBIDDEN,
+            AppError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
             AppError::Config(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Internal => StatusCode::INTERNAL_SERVER_ERROR,

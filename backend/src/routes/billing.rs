@@ -3,8 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::AppError,
-    repositories::{subscriptions, users},
-    services::stripe::{self, billing_enabled, not_configured, BillingMessage},
+    repositories::{stripe_events, subscriptions, users},
+    services::{
+        rate_limit,
+        stripe::{self, billing_enabled, not_configured, BillingMessage},
+    },
     state::AppState,
     AuthBearer,
 };
@@ -94,6 +97,11 @@ pub async fn billing_checkout(
     }
 
     let user_id = users::find_user_id_by_username(&state.pool, &auth.sub).await?;
+    let limit_key = rate_limit::key("billing:checkout", &user_id.to_string());
+    if !rate_limit::check_limit(&state.redis, &limit_key, 10, 3600).await? {
+        return Err(AppError::TooManyRequests);
+    }
+
     let current = subscriptions::current_status(&state.pool, user_id).await?;
     let customer_id = if let Some(customer_id) = current.and_then(|s| s.stripe_customer_id) {
         customer_id
@@ -109,8 +117,15 @@ pub async fn billing_checkout(
         cfg.studio_price_id.as_str()
     };
 
-    let session =
-        stripe::create_checkout_session(&state.http, &cfg, &customer_id, price_id).await?;
+    let session = stripe::create_checkout_session(
+        &state.http,
+        &cfg,
+        &customer_id,
+        price_id,
+        user_id,
+        &payload.plan,
+    )
+    .await?;
 
     Ok(Json(BillingMessage {
         enabled: true,
@@ -163,37 +178,57 @@ pub async fn billing_webhook(
 
     let event: serde_json::Value = serde_json::from_str(&body)
         .map_err(|_| AppError::BadRequest("invalid stripe payload".into()))?;
+    let event_id = event["id"].as_str().unwrap_or_default();
     let event_type = event["type"].as_str().unwrap_or_default();
     let data_obj = &event["data"]["object"];
+
+    tracing::info!(event_type, "stripe event received");
+
+    if event_id.is_empty() {
+        return Err(AppError::BadRequest("missing stripe event id".into()));
+    }
+
+    if stripe_events::is_processed(&state.pool, event_id).await? {
+        tracing::info!(event_id, "stripe event ignored");
+        return Ok(Json(BillingMessage {
+            enabled: true,
+            message: "webhook already processed",
+            checkout_url: None,
+            url: None,
+        }));
+    }
 
     match event_type {
         "checkout.session.completed" => {
             let customer_id = data_obj["customer"].as_str().unwrap_or_default();
-            if customer_id.is_empty() {
-                return Ok(Json(BillingMessage {
-                    enabled: true,
-                    message: "ignored",
-                    checkout_url: None,
-                    url: None,
-                }));
-            }
+            let subscription_id = data_obj["subscription"].as_str();
+            let price_id = data_obj["display_items"]["data"][0]["price"]["id"]
+                .as_str()
+                .unwrap_or_default();
+            let metadata_plan = data_obj["metadata"]["plan"].as_str().unwrap_or_default();
+            let plan = if !metadata_plan.is_empty() {
+                metadata_plan
+            } else {
+                stripe::detect_plan(&cfg, price_id)
+            };
+
             if let Some(user_id) =
                 subscriptions::find_user_by_customer_id(&state.pool, customer_id).await?
             {
-                let plan = "pro";
                 subscriptions::upsert_from_webhook(
                     &state.pool,
                     user_id,
                     plan,
                     "active",
                     Some(customer_id),
-                    data_obj["subscription"].as_str(),
+                    subscription_id,
                     None,
                     None,
                     false,
                 )
                 .await?;
                 users::update_user_plan(&state.pool, user_id, plan).await?;
+                tracing::info!(plan, "stripe plan updated");
             }
         }
         "customer.subscription.created"
@@ -205,6 +240,8 @@ pub async fn billing_webhook(
             let Some(user_id) =
                 subscriptions::find_user_by_customer_id(&state.pool, customer_id).await?
             else {
+                tracing::info!("stripe event ignored");
+                stripe_events::mark_processed(&state.pool, event_id, event_type, &event).await?;
                 return Ok(Json(BillingMessage {
                     enabled: true,
                     message: "ignored",
@@ -216,13 +253,7 @@ pub async fn billing_webhook(
             let price_id = data_obj["items"]["data"][0]["price"]["id"]
                 .as_str()
                 .unwrap_or_default();
-            let plan = if price_id == cfg.studio_price_id {
-                "studio"
-            } else if price_id == cfg.pro_price_id {
-                "pro"
-            } else {
-                "free"
-            };
+            let plan = stripe::detect_plan(&cfg, price_id);
             let is_active = matches!(sub_status, "active" | "trialing" | "past_due");
             let current_period_end = data_obj["current_period_end"]
                 .as_i64()
@@ -231,11 +262,12 @@ pub async fn billing_webhook(
                 .as_i64()
                 .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0));
             let cancel_at_period_end = data_obj["cancel_at_period_end"].as_bool().unwrap_or(false);
+            let final_plan = if is_active { plan } else { "free" };
 
             subscriptions::upsert_from_webhook(
                 &state.pool,
                 user_id,
-                if is_active { plan } else { "free" },
+                final_plan,
                 sub_status,
                 Some(customer_id),
                 data_obj["id"].as_str(),
@@ -244,11 +276,16 @@ pub async fn billing_webhook(
                 cancel_at_period_end,
             )
             .await?;
-            users::update_user_plan(&state.pool, user_id, if is_active { plan } else { "free" })
-                .await?;
+            users::update_user_plan(&state.pool, user_id, final_plan).await?;
+            tracing::info!(final_plan, "stripe plan updated");
         }
-        _ => {}
+        _ => {
+            tracing::info!(event_type, "stripe event ignored");
+        }
     }
+
+    stripe_events::mark_processed(&state.pool, event_id, event_type, &event).await?;
+    tracing::info!(event_id, "stripe event processed");
 
     Ok(Json(BillingMessage {
         enabled: true,

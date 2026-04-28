@@ -79,3 +79,6 @@ export const fetchConsents = () => request('/me/consents');
 export const saveConsent = (payload: { consent_type: string; granted: boolean; version: string }) => request('/me/consents', { method: 'POST', body: JSON.stringify(payload) });
 export const requestDataExport = () => request('/me/data-export', { method: 'POST' });
 export const requestDeleteAccount = () => request('/me/delete-request', { method: 'POST' });
+
+export const resendVerification = (email: string) => request('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) });
+export const verifyEmail = (tokenValue: string) => request('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token: tokenValue }) });

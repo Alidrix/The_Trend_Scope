@@ -100,12 +100,18 @@ pub async fn create_checkout_session(
     cfg: &StripeConfig,
     customer_id: &str,
     price_id: &str,
+    user_id: uuid::Uuid,
+    plan: &str,
 ) -> Result<StripeSessionResponse, AppError> {
+    let user_id = user_id.to_string();
     let params = [
         ("customer", customer_id.to_string()),
         ("mode", "subscription".to_string()),
         ("line_items[0][price]", price_id.to_string()),
         ("line_items[0][quantity]", "1".to_string()),
+        ("client_reference_id", user_id.clone()),
+        ("metadata[user_id]", user_id),
+        ("metadata[plan]", plan.to_string()),
         (
             "success_url",
             format!(
@@ -168,6 +174,16 @@ pub async fn create_portal_session(
     }
 
     Ok(res.json::<PortalResponse>().await?.url)
+}
+
+pub fn detect_plan(cfg: &StripeConfig, price_id: &str) -> &'static str {
+    if price_id == cfg.studio_price_id {
+        "studio"
+    } else if price_id == cfg.pro_price_id {
+        "pro"
+    } else {
+        "free"
+    }
 }
 
 pub fn validate_signature(payload: &str, signature: &str, webhook_secret: &str) -> bool {

@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="frontend/static/brand/trend-scope-logo-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="frontend/static/brand/trend-scope-logo-light.png">
-    <img src="frontend/static/brand/trend-scope-logo-light.svg" alt="Trend Scope — Create Success" width="420">
+    <img src="frontend/static/brand/trend-scope-logo-light.png" alt="The Trend Scope — Create Success" width="420">
   </picture>
 </p>
 
@@ -77,11 +77,29 @@
 | ✅ | **PgBouncer corrigé** | Auth SCRAM compatible PostgreSQL 16. |
 | ✅ | **Mode sombre / clair** | Thème par variables CSS, préférence système et persistance locale. |
 | ✅ | **RGPD préparé** | Pages légales, consentements, export et suppression de compte. |
-| ✅ | **Stripe préparé** | Routes et variables prêtes pour checkout, portal et webhooks. |
+| ✅ | **Stripe implémenté** | Stripe Checkout / Portal / Webhook implémentés, à valider avec de vraies clés Stripe. |
 | ✅ | **Logos ajoutés** | Versions claire et sombre disponibles dans `frontend/static/brand/`. |
 
 > 🔥 **Supabase n’est plus une dépendance officielle du projet.**  
 > The Trend Scope repose maintenant sur une infrastructure SaaS standard et portable.
+
+---
+
+## ✅ État réel du projet
+
+| Bloc | Statut |
+| --- | --- |
+| Auth / Register / Onboarding | ✅ Implémenté |
+| Plans Free / Pro / Studio | ✅ Implémenté |
+| Stripe Checkout | 🟡 Implémenté, à tester avec Stripe CLI |
+| Stripe Portal | 🟡 Implémenté, à tester |
+| Stripe Webhook | 🟡 Implémenté, idempotence à renforcer |
+| Watchlist | ✅ Base CRUD |
+| Alertes | ✅ Base CRUD Studio |
+| Rapports | ✅ Base Studio |
+| Admin panel | 🟡 UI prête, données à enrichir |
+| TikTok / Instagram | 🔜 À venir |
+| Déploiement production | 🔜 À créer |
 
 ---
 
@@ -308,7 +326,7 @@ Deux assets de marque sont disponibles :
 
 | Asset | Usage |
 | --- | --- |
-| `frontend/static/brand/trend-scope-logo-light.svg` | Logo pour fond clair. |
+| `frontend/static/brand/trend-scope-logo-light.png` | Logo pour fond clair. |
 | `frontend/static/brand/trend-scope-logo-dark.svg` | Logo pour fond sombre. |
 
 ### Mode sombre / clair

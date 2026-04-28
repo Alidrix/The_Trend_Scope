@@ -38,7 +38,7 @@ pub async fn find_user_id_by_username(
 
 pub async fn current_user(pool: &PgPool, username: &str) -> Result<CurrentUser, AppError> {
     sqlx::query_as::<_, CurrentUser>(
-        "SELECT u.id, NULL::TEXT as email, u.username, p.display_name, u.role, u.plan, p.country, p.profile_type, u.created_at\n         FROM users u\n         LEFT JOIN user_profiles p ON p.user_id = u.id\n         WHERE u.username = $1",
+        "SELECT u.id, NULL::TEXT as email, u.username, p.display_name, u.role, u.plan, p.country, p.profile_type, u.created_at, u.email_verified\n         FROM users u\n         LEFT JOIN user_profiles p ON p.user_id = u.id\n         WHERE u.username = $1",
     )
     .bind(username)
     .fetch_one(pool)

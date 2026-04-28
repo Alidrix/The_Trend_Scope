@@ -1,0 +1,15 @@
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+api:
+  dashboard: false
+
+providers:
+  docker:
+    exposedByDefault: false
+
+serversTransport:
+  insecureSkipVerify: false

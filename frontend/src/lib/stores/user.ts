@@ -8,6 +8,7 @@ export type CurrentUser = {
   display_name?: string;
   role: 'user' | 'admin';
   plan: 'free' | 'pro' | 'studio';
+  email_verified?: boolean;
 };
 
 export const currentUser = writable<CurrentUser | null>(null);

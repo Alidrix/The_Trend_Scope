@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    error::AppError, models::plan::PlanTier, repositories::password_reset, services::email,
+    error::AppError,
+    models::plan::PlanTier,
+    repositories::{email_verification, password_reset},
+    services::{email, rate_limit},
     state::AppState,
 };
 
@@ -35,6 +38,11 @@ pub struct RegisterPayload {
 #[derive(Debug, Deserialize)]
 pub struct ForgotPasswordPayload {
     pub email: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyEmailPayload {
+    pub token: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,6 +84,11 @@ pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterPayload>,
 ) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    let limit_key = rate_limit::key("auth:register", "global");
+    if !rate_limit::check_limit(&state.redis, &limit_key, 5, 3600).await? {
+        return Err(AppError::TooManyRequests);
+    }
+
     if !payload.accept_terms || !payload.accept_privacy {
         return Err(AppError::BadRequest(
             "L'acceptation des CGU et de la politique de confidentialité est obligatoire".into(),
@@ -141,6 +154,24 @@ pub async fn register(
     .execute(&state.pool)
     .await?;
 
+    let verify_token = uuid::Uuid::new_v4().to_string();
+    let token_hash = hex::encode(Sha256::digest(verify_token.as_bytes()));
+    let expires_at = chrono::Utc::now() + chrono::Duration::hours(24);
+    email_verification::create_token(&state.pool, user_id, &token_hash, expires_at).await?;
+    let verify_url = format!(
+        "{}/verify-email?token={verify_token}",
+        state.config.frontend_origin
+    );
+    let body = email::render_template("verify-email", Some(&verify_url));
+    email::send_email(
+        &state.pool,
+        Some(user_id),
+        &payload.username,
+        "Verify your email",
+        &body,
+    )
+    .await?;
+
     Ok(Json(crate::error::ApiMessage {
         message: "Compte créé, vous pouvez vous connecter".into(),
     }))
@@ -150,6 +181,11 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<Credentials>,
 ) -> Result<Json<AuthResponse>, AppError> {
+    let limit_key = rate_limit::key("auth:login", &payload.username);
+    if !rate_limit::check_limit(&state.redis, &limit_key, 10, 600).await? {
+        return Err(AppError::TooManyRequests);
+    }
+
     let Some((password_hash, plan)) = sqlx::query_as::<_, (String, PlanTier)>(
         "SELECT password_hash, plan FROM users WHERE username = $1",
     )
@@ -183,6 +219,11 @@ pub async fn forgot_password(
     State(state): State<AppState>,
     Json(payload): Json<ForgotPasswordPayload>,
 ) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    let limit_key = rate_limit::key("auth:forgot-password", &payload.email);
+    if !rate_limit::check_limit(&state.redis, &limit_key, 5, 1800).await? {
+        return Err(AppError::TooManyRequests);
+    }
+
     let maybe_user: Option<(uuid::Uuid, String)> =
         sqlx::query_as("SELECT id, username FROM users WHERE username = $1")
             .bind(&payload.email)
@@ -198,12 +239,75 @@ pub async fn forgot_password(
             "{}/reset-password?token={}",
             state.config.frontend_origin, token_raw
         );
-        let body = format!("<p>Bonjour,</p><p>Réinitialisez votre mot de passe: <a href=\"{reset_url}\">{reset_url}</a></p>");
-        email::send_email(&username, "Reset password", &body).await?;
+        let body = email::render_template("reset-password", Some(&reset_url));
+        email::send_email(
+            &state.pool,
+            Some(user_id),
+            &username,
+            "Reset password",
+            &body,
+        )
+        .await?;
     }
 
     Ok(Json(crate::error::ApiMessage {
         message: "If an account exists, a reset link has been sent".into(),
+    }))
+}
+
+pub async fn resend_verification(
+    State(state): State<AppState>,
+    Json(payload): Json<ForgotPasswordPayload>,
+) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    let maybe_user: Option<(uuid::Uuid, bool)> =
+        sqlx::query_as("SELECT id, email_verified FROM users WHERE username = $1")
+            .bind(&payload.email)
+            .fetch_optional(&state.pool)
+            .await?;
+
+    if let Some((user_id, false)) = maybe_user {
+        let token_raw = uuid::Uuid::new_v4().to_string();
+        let token_hash = hex::encode(Sha256::digest(token_raw.as_bytes()));
+        let expires_at = chrono::Utc::now() + chrono::Duration::hours(24);
+        email_verification::create_token(&state.pool, user_id, &token_hash, expires_at).await?;
+        let verify_url = format!(
+            "{}/verify-email?token={token_raw}",
+            state.config.frontend_origin
+        );
+        let body = email::render_template("verify-email", Some(&verify_url));
+        email::send_email(
+            &state.pool,
+            Some(user_id),
+            &payload.email,
+            "Verify your email",
+            &body,
+        )
+        .await?;
+    }
+
+    Ok(Json(crate::error::ApiMessage {
+        message: "verification email sent if account exists".into(),
+    }))
+}
+
+pub async fn verify_email(
+    State(state): State<AppState>,
+    Json(payload): Json<VerifyEmailPayload>,
+) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    let token_hash = hex::encode(Sha256::digest(payload.token.as_bytes()));
+    let Some(user_id) = email_verification::consume_token(&state.pool, &token_hash).await? else {
+        return Err(AppError::BadRequest(
+            "invalid or expired verification token".into(),
+        ));
+    };
+
+    sqlx::query("UPDATE users SET email_verified = true WHERE id = $1")
+        .bind(user_id)
+        .execute(&state.pool)
+        .await?;
+
+    Ok(Json(crate::error::ApiMessage {
+        message: "email verified".into(),
     }))
 }
 

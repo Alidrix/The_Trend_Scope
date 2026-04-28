@@ -15,7 +15,10 @@ use crate::{
             system as admin_system, users as admin_users,
         },
         alerts::{create_alert, delete_alert, list_alerts, update_alert},
-        auth::{auth_status, forgot_password, login, register, reset_password},
+        auth::{
+            auth_status, forgot_password, login, register, resend_verification, reset_password,
+            verify_email,
+        },
         billing::{billing_checkout, billing_portal, billing_status, billing_webhook},
         consents::{get_consents, post_consent},
         favorites::{add_favorite, delete_favorite, list_favorites},
@@ -59,6 +62,8 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
             .route("/api/v1/auth/status", get(auth_status))
             .route("/api/v1/auth/register", post(register))
             .route("/api/v1/auth/forgot-password", post(forgot_password))
+            .route("/api/v1/auth/resend-verification", post(resend_verification))
+            .route("/api/v1/auth/verify-email", post(verify_email))
             .route("/api/v1/auth/reset-password", post(reset_password))
             .route("/api/v1/plans", get(list_plans))
             .route("/api/v1/billing/status", get(billing_status))
@@ -152,7 +157,9 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
             )
             .route(
                 "/api/v1/reports/:id",
-                get(|auth: AuthBearer, state, path| async move { get_report(auth, state, path).await }),
+                get(|auth: AuthBearer, state, path| async move {
+                    get_report(auth, state, path).await
+                }),
             )
             .route(
                 "/api/v1/admin/overview",

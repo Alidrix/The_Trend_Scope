@@ -13,4 +13,5 @@ pub struct CurrentUser {
     pub country: Option<String>,
     pub profile_type: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
+    pub email_verified: bool,
 }
