@@ -211,3 +211,52 @@ CREATE INDEX IF NOT EXISTS idx_trend_views_user_id ON trend_views(user_id);
 
 ALTER TABLE favorites ADD COLUMN IF NOT EXISTS platform TEXT;
 ALTER TABLE favorites ADD COLUMN IF NOT EXISTS trend_id TEXT;
+
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE subscriptions ALTER COLUMN status SET DEFAULT 'inactive';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscriptions(stripe_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
+
+CREATE TABLE IF NOT EXISTS alert_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    platform TEXT,
+    region TEXT,
+    category TEXT,
+    keyword TEXT,
+    min_views_per_hour BIGINT,
+    min_trend_score DOUBLE PRECISION,
+    channel TEXT NOT NULL DEFAULT 'web',
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS alert_deliveries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    alert_rule_id UUID REFERENCES alert_rules(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending',
+    payload JSONB NOT NULL DEFAULT '{}',
+    delivered_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS title TEXT DEFAULT 'Weekly trend report';
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS period_start DATE DEFAULT CURRENT_DATE;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS period_end DATE DEFAULT CURRENT_DATE;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS file_url TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS summary JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);

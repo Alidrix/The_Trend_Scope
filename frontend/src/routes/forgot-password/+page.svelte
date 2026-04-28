@@ -1,10 +1,18 @@
 <script lang="ts">
+  import { forgotPassword } from '$lib/api';
   let email = '';
   let submitted = false;
+  let error = '';
 
-  function submit(event: Event) {
+  async function submit(event: Event) {
     event.preventDefault();
-    submitted = true;
+    error = '';
+    try {
+      await forgotPassword(email);
+      submitted = true;
+    } catch (e) {
+      error = (e as Error).message;
+    }
   }
 </script>
 
@@ -19,22 +27,10 @@
     </form>
 
     {#if submitted}
-      <p class="notice">Fonctionnalité bientôt disponible. Votre demande a bien été prise en compte.</p>
+      <p class="notice">Si un compte existe, un e-mail de réinitialisation vient d’être envoyé.</p>
     {/if}
+    {#if error}<p>{error}</p>{/if}
 
     <a href="/login">Retour à la connexion</a>
   </div>
 </section>
-
-<style>
-  .forgot-page { min-height: calc(100vh - 56px); padding: 1rem; display: grid; place-items: center; }
-  .card { max-width: 520px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 1.2rem; display: grid; gap: 0.8rem; }
-  h1, p { margin: 0; }
-  p { color: var(--muted); }
-  form { display: grid; gap: 0.6rem; }
-  label { display: grid; gap: 0.35rem; }
-  input { border: 1px solid var(--border); border-radius: 12px; padding: 0.72rem 0.85rem; background: var(--surface); color: var(--text); }
-  button { border: none; border-radius: 12px; background: var(--primary); color: white; padding: 0.72rem 0.85rem; font-weight: 700; }
-  .notice { color: var(--text); background: var(--primary-soft); border-radius: 10px; padding: 0.65rem 0.75rem; }
-  a { color: var(--primary); font-weight: 700; }
-</style>

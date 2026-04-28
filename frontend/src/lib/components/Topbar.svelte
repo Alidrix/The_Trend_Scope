@@ -1,13 +1,13 @@
 <script lang="ts">
   import PlanBadge from './PlanBadge.svelte';
   import UserMenu from './UserMenu.svelte';
-  export let plan = 'free';
+  import { currentUser } from '$lib/stores/user';
 </script>
 
 <div class="topbar">
   <a class="logo" href="/radar">The Trend Scope</a>
   <input placeholder="Rechercher une niche ou un sujet" />
-  <PlanBadge {plan} />
+  <PlanBadge plan={$currentUser?.plan || 'free'} />
   <UserMenu />
 </div>
 

@@ -14,16 +14,20 @@ use crate::{
             jobs as admin_jobs, overview as admin_overview, sources as admin_sources,
             system as admin_system, users as admin_users,
         },
-        auth::{auth_status, login, register},
+        alerts::{create_alert, delete_alert, list_alerts, update_alert},
+        auth::{auth_status, forgot_password, login, register, reset_password},
         billing::{billing_checkout, billing_portal, billing_status, billing_webhook},
         consents::{get_consents, post_consent},
         favorites::{add_favorite, delete_favorite, list_favorites},
-        health::health,
+        health::{health, ready},
         me::{data_export_request, delete_request, get_me, patch_me, save_preferences},
+        metrics::metrics,
         notes::update_note,
         plans::list_plans,
         radar::daily_radar,
+        reports::{generate_report, get_report, list_reports},
         videos::{list_videos, refresh_videos, scan_videos},
+        watchlists::{create_watchlist, delete_watchlist, list_watchlists, update_watchlist},
     },
     state::AppState,
     AuthBearer,
@@ -49,9 +53,13 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
     Ok(
         Router::new()
             .route("/api/v1/health", get(health))
+            .route("/api/v1/ready", get(ready))
+            .route("/metrics", get(metrics))
             .route("/api/v1/auth/login", post(login))
             .route("/api/v1/auth/status", get(auth_status))
             .route("/api/v1/auth/register", post(register))
+            .route("/api/v1/auth/forgot-password", post(forgot_password))
+            .route("/api/v1/auth/reset-password", post(reset_password))
             .route("/api/v1/plans", get(list_plans))
             .route("/api/v1/billing/status", get(billing_status))
             .route("/api/v1/billing/checkout", post(billing_checkout))
@@ -59,7 +67,9 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
             .route("/api/v1/billing/webhook", post(billing_webhook))
             .route(
                 "/api/v1/radar/daily",
-                get(|auth: AuthBearer, state| async move { daily_radar(auth, state).await }),
+                get(|auth: AuthBearer, state, query| async move {
+                    daily_radar(auth, state, query).await
+                }),
             )
             .route(
                 "/api/v1/videos",
@@ -96,6 +106,53 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
                 axum::routing::delete(|auth: AuthBearer, state, path| async move {
                     delete_favorite(auth, state, path).await
                 }),
+            )
+            .route(
+                "/api/v1/watchlists",
+                get(|auth: AuthBearer, state| async move { list_watchlists(auth, state).await })
+                    .post(|auth: AuthBearer, state, payload| async move {
+                        create_watchlist(auth, state, payload).await
+                    }),
+            )
+            .route(
+                "/api/v1/watchlists/:id",
+                axum::routing::patch(|auth: AuthBearer, state, path, payload| async move {
+                    update_watchlist(auth, state, path, payload).await
+                })
+                .delete(|auth: AuthBearer, state, path| async move {
+                    delete_watchlist(auth, state, path).await
+                }),
+            )
+            .route(
+                "/api/v1/alerts",
+                get(|auth: AuthBearer, state| async move { list_alerts(auth, state).await }).post(
+                    |auth: AuthBearer, state, payload| async move {
+                        create_alert(auth, state, payload).await
+                    },
+                ),
+            )
+            .route(
+                "/api/v1/alerts/:id",
+                axum::routing::patch(|auth: AuthBearer, state, path, payload| async move {
+                    update_alert(auth, state, path, payload).await
+                })
+                .delete(|auth: AuthBearer, state, path| async move {
+                    delete_alert(auth, state, path).await
+                }),
+            )
+            .route(
+                "/api/v1/reports",
+                get(|auth: AuthBearer, state| async move { list_reports(auth, state).await }),
+            )
+            .route(
+                "/api/v1/reports/generate",
+                post(|auth: AuthBearer, state, payload| async move {
+                    generate_report(auth, state, payload).await
+                }),
+            )
+            .route(
+                "/api/v1/reports/:id",
+                get(|auth: AuthBearer, state, path| async move { get_report(auth, state, path).await }),
             )
             .route(
                 "/api/v1/admin/overview",

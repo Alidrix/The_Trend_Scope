@@ -3,6 +3,7 @@
   import AppShell from '$lib/components/AppShell.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { createCheckout, fetchBillingStatus, openBillingPortal } from '$lib/api';
+  import { currentUser } from '$lib/stores/user';
 
   let status: any = { provider: 'stripe', enabled: false, message: 'Chargement...' };
 
@@ -24,14 +25,15 @@
 <AppShell>
   <PageHeader title="Abonnement" subtitle="Gérez votre offre, vos paiements et votre montée en puissance." />
   <section class="card">
-    <p><strong>Plan actuel :</strong> Free</p>
-    <p><strong>Tendances restantes aujourd’hui :</strong> 2 / 3</p>
+    <p><strong>Plan actuel :</strong> {$currentUser?.plan?.toUpperCase() || 'FREE'}</p>
+    <p><strong>État abonnement :</strong> {status.subscription_status || 'inactive'}</p>
+    <p><strong>Renouvellement :</strong> {status.current_period_end ? new Date(status.current_period_end).toLocaleDateString() : '—'}</p>
     <div class="actions">
       <button on:click={() => checkout('pro')}>Passer Pro — 10 €/mois</button>
       <button on:click={() => checkout('studio')}>Choisir Studio — 18 €/mois</button>
       <button class="ghost" on:click={portal}>Ouvrir le portail client</button>
     </div>
-    {#if !status.enabled}<p class="muted">Le paiement Stripe n’est pas encore configuré sur cet environnement.</p>{/if}
+    {#if !status.enabled}<p class="muted">Stripe non configuré : {status.message}</p>{/if}
   </section>
 </AppShell>
 

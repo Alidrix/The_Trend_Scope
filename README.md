@@ -602,3 +602,7 @@ curl -fsS http://localhost:4443/api/v1/health
 curl -fsS http://localhost:4443/api/v1/auth/status
 docker compose down -v
 ```
+
+## Production & Monetization update
+
+Stripe checkout/portal/webhook, user role+plan, dynamic radar filters, favorites API integration, watchlists, alerts, reports, forgot/reset password, readiness and metrics endpoints are now wired in the app.

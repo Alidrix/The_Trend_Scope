@@ -1,8 +1,12 @@
 use axum::{extract::State, Json};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
-use crate::{error::AppError, models::plan::PlanTier, state::AppState};
+use crate::{
+    error::AppError, models::plan::PlanTier, repositories::password_reset, services::email,
+    state::AppState,
+};
 
 const MIN_PASSWORD_LENGTH: usize = 10;
 
@@ -26,6 +30,17 @@ pub struct RegisterPayload {
     pub accept_terms: bool,
     pub accept_privacy: bool,
     pub marketing_opt_in: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ForgotPasswordPayload {
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordPayload {
+    pub token: String,
+    pub password: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -162,4 +177,59 @@ pub async fn login(
     .map_err(|_| AppError::Internal)?;
 
     Ok(Json(AuthResponse { token, plan }))
+}
+
+pub async fn forgot_password(
+    State(state): State<AppState>,
+    Json(payload): Json<ForgotPasswordPayload>,
+) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    let maybe_user: Option<(uuid::Uuid, String)> =
+        sqlx::query_as("SELECT id, username FROM users WHERE username = $1")
+            .bind(&payload.email)
+            .fetch_optional(&state.pool)
+            .await?;
+
+    if let Some((user_id, username)) = maybe_user {
+        let token_raw = uuid::Uuid::new_v4().to_string();
+        let token_hash = hex::encode(Sha256::digest(token_raw.as_bytes()));
+        let expires_at = chrono::Utc::now() + chrono::Duration::minutes(30);
+        password_reset::create_token(&state.pool, user_id, &token_hash, expires_at).await?;
+        let reset_url = format!(
+            "{}/reset-password?token={}",
+            state.config.frontend_origin, token_raw
+        );
+        let body = format!("<p>Bonjour,</p><p>Réinitialisez votre mot de passe: <a href=\"{reset_url}\">{reset_url}</a></p>");
+        email::send_email(&username, "Reset password", &body).await?;
+    }
+
+    Ok(Json(crate::error::ApiMessage {
+        message: "If an account exists, a reset link has been sent".into(),
+    }))
+}
+
+pub async fn reset_password(
+    State(state): State<AppState>,
+    Json(payload): Json<ResetPasswordPayload>,
+) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    if payload.password.chars().count() < MIN_PASSWORD_LENGTH {
+        return Err(AppError::BadRequest(format!(
+            "Le mot de passe doit contenir au moins {MIN_PASSWORD_LENGTH} caractères"
+        )));
+    }
+
+    let token_hash = hex::encode(Sha256::digest(payload.token.as_bytes()));
+    let Some(user_id) = password_reset::consume_token(&state.pool, &token_hash).await? else {
+        return Err(AppError::BadRequest("invalid or expired token".into()));
+    };
+
+    let password_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)?;
+    sqlx::query("UPDATE users SET password_hash = $2 WHERE id = $1")
+        .bind(user_id)
+        .bind(password_hash)
+        .execute(&state.pool)
+        .await?;
+
+    Ok(Json(crate::error::ApiMessage {
+        message: "password has been reset".into(),
+    }))
 }

@@ -4,35 +4,45 @@ pub mod error;
 pub mod models {
     pub mod plan;
     pub mod subscription;
+    pub mod user;
     pub mod video;
 }
 pub mod repositories {
     pub mod admin;
+    pub mod alerts;
     pub mod audit_logs;
     pub mod consents;
     pub mod favorites;
+    pub mod password_reset;
+    pub mod reports;
     pub mod subscriptions;
     pub mod usage;
     pub mod users;
     pub mod videos;
+    pub mod watchlists;
 }
 pub mod routes {
     pub mod admin;
+    pub mod alerts;
     pub mod auth;
     pub mod billing;
     pub mod consents;
     pub mod favorites;
     pub mod health;
     pub mod me;
+    pub mod metrics;
     pub mod notes;
     pub mod plans;
     pub mod radar;
+    pub mod reports;
     pub mod videos;
+    pub mod watchlists;
 }
 pub mod services {
     pub mod access;
     pub mod analytics;
     pub mod cache;
+    pub mod email;
     pub mod privacy;
     pub mod queue;
     pub mod rate_limit;

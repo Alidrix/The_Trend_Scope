@@ -1,5 +1,7 @@
 <script lang="ts">
-  export let isAdmin = false;
+  import { currentUser } from '$lib/stores/user';
+
+  $: isAdmin = $currentUser?.role === 'admin';
   const links = [
     ['Radar', '/radar'],
     ['Favoris', '/favorites'],

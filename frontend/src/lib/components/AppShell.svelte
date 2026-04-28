@@ -1,14 +1,20 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import Sidebar from './Sidebar.svelte';
   import Topbar from './Topbar.svelte';
-  export let isAdmin = false;
-  export let plan = 'free';
+  import { token } from '$lib/stores/auth';
+  import { currentUser, loadCurrentUser } from '$lib/stores/user';
+
+  onMount(async () => {
+    if (get(token)) await loadCurrentUser();
+  });
 </script>
 
 <div class="shell">
-  <Topbar {plan} />
+  <Topbar />
   <div class="main">
-    <Sidebar {isAdmin} />
+    <Sidebar />
     <section class="content"><slot /></section>
   </div>
 </div>

@@ -1,12 +1,7 @@
 use axum::{extract::State, Json};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use crate::{error::AppError, AuthBearer};
-
-#[derive(Debug, Serialize)]
-pub struct MeResponse {
-    pub username: String,
-}
+use crate::{error::AppError, repositories::users, AuthBearer};
 
 #[derive(Debug, Deserialize)]
 pub struct MePatchPayload {
@@ -21,15 +16,27 @@ pub struct SavePreferencesPayload {
     pub regions: Vec<String>,
 }
 
-pub async fn get_me(auth: AuthBearer) -> Json<MeResponse> {
-    Json(MeResponse { username: auth.sub })
+pub async fn get_me(
+    auth: AuthBearer,
+    State(state): State<crate::state::AppState>,
+) -> Result<Json<crate::models::user::CurrentUser>, AppError> {
+    Ok(Json(users::current_user(&state.pool, &auth.sub).await?))
 }
 
 pub async fn patch_me(
-    _auth: AuthBearer,
-    State(_state): State<crate::state::AppState>,
-    Json(_payload): Json<MePatchPayload>,
+    auth: AuthBearer,
+    State(state): State<crate::state::AppState>,
+    Json(payload): Json<MePatchPayload>,
 ) -> Result<Json<crate::error::ApiMessage>, AppError> {
+    let user_id = users::find_user_id_by_username(&state.pool, &auth.sub).await?;
+    sqlx::query(
+        "UPDATE user_profiles SET display_name = $2, updated_at = NOW() WHERE user_id = $1",
+    )
+    .bind(user_id)
+    .bind(payload.display_name)
+    .execute(&state.pool)
+    .await?;
+
     Ok(Json(crate::error::ApiMessage {
         message: "profile updated".to_string(),
     }))

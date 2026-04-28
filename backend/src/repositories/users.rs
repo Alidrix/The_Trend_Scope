@@ -1,4 +1,4 @@
-use crate::{config::AuthConfig, error::AppError};
+use crate::{config::AuthConfig, error::AppError, models::user::CurrentUser};
 use sqlx::PgPool;
 
 pub async fn ensure_seed_user(pool: &PgPool, config: &AuthConfig) -> Result<(), AppError> {
@@ -22,5 +22,39 @@ pub async fn ensure_seed_user(pool: &PgPool, config: &AuthConfig) -> Result<(), 
         .await?;
     }
 
+    Ok(())
+}
+
+pub async fn find_user_id_by_username(
+    pool: &PgPool,
+    username: &str,
+) -> Result<uuid::Uuid, AppError> {
+    sqlx::query_scalar("SELECT id FROM users WHERE username = $1")
+        .bind(username)
+        .fetch_one(pool)
+        .await
+        .map_err(AppError::from)
+}
+
+pub async fn current_user(pool: &PgPool, username: &str) -> Result<CurrentUser, AppError> {
+    sqlx::query_as::<_, CurrentUser>(
+        "SELECT u.id, NULL::TEXT as email, u.username, p.display_name, u.role, u.plan, p.country, p.profile_type, u.created_at\n         FROM users u\n         LEFT JOIN user_profiles p ON p.user_id = u.id\n         WHERE u.username = $1",
+    )
+    .bind(username)
+    .fetch_one(pool)
+    .await
+    .map_err(AppError::from)
+}
+
+pub async fn update_user_plan(
+    pool: &PgPool,
+    user_id: uuid::Uuid,
+    plan: &str,
+) -> Result<(), AppError> {
+    sqlx::query("UPDATE users SET plan = $2::plan_tier WHERE id = $1")
+        .bind(user_id)
+        .bind(plan)
+        .execute(pool)
+        .await?;
     Ok(())
 }

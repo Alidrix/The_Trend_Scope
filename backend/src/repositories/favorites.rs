@@ -8,12 +8,18 @@ use crate::error::AppError;
 pub struct FavoriteItem {
     pub platform: String,
     pub trend_id: String,
+    pub title: Option<String>,
+    pub thumbnail_url: Option<String>,
+    pub views_per_hour: Option<i64>,
+    pub trend_score: Option<f64>,
+    pub category: Option<String>,
+    pub region: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub async fn list(pool: &PgPool, user_id: Uuid) -> Result<Vec<FavoriteItem>, AppError> {
     let rows = sqlx::query_as::<_, FavoriteItem>(
-        "SELECT platform, trend_id, created_at FROM favorites WHERE user_id = $1 ORDER BY created_at DESC",
+        "SELECT f.platform, f.trend_id, v.title, v.thumbnail_url, v.views_per_hour,\n                CASE WHEN v.views_per_hour IS NULL THEN NULL ELSE LEAST(100.0, GREATEST(0.0, v.views_per_hour::double precision / 300.0)) END as trend_score,\n                v.category, v.region, f.created_at\n         FROM favorites f\n         LEFT JOIN videos v ON v.youtube_id = f.trend_id\n         WHERE f.user_id = $1 ORDER BY f.created_at DESC",
     )
     .bind(user_id)
     .fetch_all(pool)

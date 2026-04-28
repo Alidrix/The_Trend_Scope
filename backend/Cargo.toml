@@ -28,6 +28,9 @@ async-nats = "0.35"
 clickhouse = "0.12"
 time = "0.3"
 validator = { version = "0.18", features = ["derive"] }
+hex = "0.4"
+sha2 = "0.10"
+hmac = "0.12"
 
 [dev-dependencies]
 axum = { version = "0.7", features = ["macros", "json"] }
