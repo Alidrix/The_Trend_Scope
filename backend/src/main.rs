@@ -161,13 +161,7 @@ async fn main() -> Result<(), AppError> {
 async fn apply_bootstrap_migration(pool: &PgPool) -> Result<(), AppError> {
     const INIT_SQL: &str = include_str!("../../db/migrations/init.sql");
 
-    for statement in INIT_SQL
-        .split(';')
-        .map(str::trim)
-        .filter(|sql| !sql.is_empty())
-    {
-        sqlx::query(statement).execute(pool).await?;
-    }
+    sqlx::raw_sql(INIT_SQL).execute(pool).await?;
 
     Ok(())
 }
