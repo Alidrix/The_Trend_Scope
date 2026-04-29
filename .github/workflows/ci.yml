@@ -100,3 +100,12 @@ jobs:
         run: cp .env.production.example .env.production
       - name: Validate production compose
         run: docker compose --env-file .env.production -f docker-compose.prod.yml config
+      - name: Validate Traefik and preflight files
+        run: |
+          test -f infra/traefik/traefik.yml
+          test -f infra/traefik/dynamic.example.yml
+          test -f scripts/preflight-prod.sh
+      - name: Validate VITE_API_BASE build arg wiring
+        run: |
+          grep -q "ARG VITE_API_BASE" frontend/Dockerfile
+          grep -q "VITE_API_BASE: \${VITE_API_BASE}" docker-compose.prod.yml

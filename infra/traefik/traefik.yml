@@ -32,7 +32,6 @@ providers:
 certificatesResolvers:
   cloudflare:
     acme:
-      email: "admin@thetrendscope.com"
       storage: /letsencrypt/acme.json
       dnsChallenge:
         provider: cloudflare

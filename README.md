@@ -649,3 +649,37 @@ chmod +x scripts/prod-*.sh
 >
 > ⚠️ Ne jamais exposer PostgreSQL, Redis, NATS ou ClickHouse publiquement.
 > Seul Traefik doit exposer les ports 80 et 443.
+
+## 🏁 Avant lancement réel
+
+Le moteur applicatif est prévu pour tourner sans secrets dans le repo. Avant lancement, ajouter dans `.env.production` :
+
+| Secret | Rôle |
+| --- | --- |
+| `CF_DNS_API_TOKEN` | Certificats Let’s Encrypt DNS-01 via Cloudflare |
+| `YOUTUBE_API_KEY` | Collecte YouTube côté serveur |
+| `TIKTOK_API_KEY` | Future collecte TikTok |
+| `INSTAGRAM_API_KEY` | Future collecte Instagram |
+| `STRIPE_SECRET_KEY` | Paiements Stripe |
+| `STRIPE_WEBHOOK_SECRET` | Webhooks Stripe |
+| `SMTP_*` | Emails transactionnels |
+| `SECRET_KEY` | JWT |
+| `POSTGRES_PASSWORD` | Base PostgreSQL |
+
+Commande de vérification :
+
+```bash
+./scripts/preflight-prod.sh
+```
+
+## ⚠️ Services internes
+
+Ne jamais exposer publiquement :
+
+- PostgreSQL
+- PgBouncer
+- Redis
+- NATS
+- ClickHouse
+
+Seul Traefik expose `80` et `443`.
