@@ -100,6 +100,27 @@ jobs:
         run: cp .env.production.example .env.production
       - name: Validate production compose
         run: docker compose --env-file .env.production -f docker-compose.prod.yml config
+      - name: Repository policy checks
+        run: |
+          if git ls-files --error-unmatch infra/traefik/dynamic.yml >/dev/null 2>&1; then
+            echo "infra/traefik/dynamic.yml must not be tracked"
+            exit 1
+          fi
+          test -f infra/traefik/dynamic.example.yml
+          grep -q "idx_videos_platform" db/migrations/init.sql
+          if grep -q "platforms: \['youtube'\]" frontend/src/routes/watchlist/+page.svelte; then
+            echo "watchlist page still contains hardcoded youtube platforms"
+            exit 1
+          fi
+          if grep -q "Alerte VPH" frontend/src/routes/alerts/+page.svelte; then
+            echo "alerts page still contains hardcoded Alerte VPH"
+            exit 1
+          fi
+          if grep -q "Weekly report" frontend/src/routes/reports/+page.svelte; then
+            echo "reports page still contains hardcoded Weekly report"
+            exit 1
+          fi
+
       - name: Validate Traefik and preflight files
         run: |
           test -f infra/traefik/traefik.yml

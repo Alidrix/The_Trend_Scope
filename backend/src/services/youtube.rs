@@ -158,6 +158,7 @@ pub async fn scan_theme_region(
             .map(|t| t.url);
 
         out.push(NewVideo {
+            platform: "youtube".to_string(),
             youtube_id: item.id.clone(),
             title: item.snippet.title,
             category: theme.to_string(),

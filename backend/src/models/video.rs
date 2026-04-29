@@ -5,6 +5,7 @@ use sqlx::{postgres::PgRow, Row};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Video {
     pub id: uuid::Uuid,
+    pub platform: String,
     pub youtube_id: String,
     pub title: String,
     pub category: String,
@@ -25,6 +26,7 @@ impl Video {
         let duration_seconds: i32 = row.get("duration_seconds");
         Self {
             id: row.get("id"),
+            platform: row.get("platform"),
             youtube_id: row.get("youtube_id"),
             title: row.get("title"),
             category: row.get("category"),
@@ -44,6 +46,7 @@ impl Video {
 
 #[derive(Debug, Deserialize)]
 pub struct VideoPayload {
+    pub platform: String,
     pub youtube_id: String,
     pub title: String,
     pub category: String,
@@ -67,6 +70,7 @@ pub struct ScanResponse {
 
 #[derive(Debug, Clone)]
 pub struct NewVideo {
+    pub platform: String,
     pub youtube_id: String,
     pub title: String,
     pub category: String,

@@ -18,7 +18,7 @@ pub async fn list_videos(
 ) -> Result<Json<ApiVideosResponse>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
     let records = sqlx::query(
-        "SELECT id, youtube_id, title, category, region, thumbnail_url, channel_title, description, url, views_per_hour, duration_seconds, published_at, notes FROM videos ORDER BY views_per_hour DESC",
+        "SELECT id, platform, youtube_id, title, category, region, thumbnail_url, channel_title, description, url, views_per_hour, duration_seconds, published_at, notes FROM videos ORDER BY views_per_hour DESC",
     )
     .map(Video::from_row)
     .fetch_all(&state.pool)
@@ -35,6 +35,7 @@ pub async fn refresh_videos(
     ensure_admin(&state.pool, &auth.sub).await?;
     for item in payload {
         let candidate = NewVideo {
+            platform: item.platform,
             youtube_id: item.youtube_id,
             title: item.title,
             category: item.category,
@@ -49,7 +50,7 @@ pub async fn refresh_videos(
         };
 
         let (video_id, _) = upsert_video(&state.pool, &candidate).await?;
-        insert_video_stat(&state.pool, video_id, candidate.views_per_hour).await?;
+        insert_video_stat(&state.pool, video_id, &candidate.platform, candidate.views_per_hour).await?;
     }
 
     Ok(Json(ApiMessage {
@@ -104,7 +105,7 @@ async fn process_scanned_videos(
 ) -> Result<(), AppError> {
     for item in videos {
         let (video_id, was_inserted) = upsert_video(pool, &item).await?;
-        insert_video_stat(pool, video_id, item.views_per_hour).await?;
+        insert_video_stat(pool, video_id, &item.platform, item.views_per_hour).await?;
 
         if was_inserted {
             *inserted += 1;

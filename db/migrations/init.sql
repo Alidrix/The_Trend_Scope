@@ -322,3 +322,14 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_toke
 CREATE INDEX IF NOT EXISTS idx_consents_user_id ON consents(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_hash ON email_verification_tokens(token_hash);
+
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform TEXT NOT NULL DEFAULT 'youtube';
+CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_videos_platform_external_id ON videos(platform, youtube_id);
+
+ALTER TABLE video_stats ADD COLUMN IF NOT EXISTS platform TEXT NOT NULL DEFAULT 'youtube';
+CREATE INDEX IF NOT EXISTS idx_video_stats_platform ON video_stats(platform);
+
+ALTER TABLE alert_deliveries ADD COLUMN IF NOT EXISTS trend_id TEXT;
+ALTER TABLE alert_deliveries ADD COLUMN IF NOT EXISTS platform TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_alert_delivery_dedup ON alert_deliveries(alert_rule_id, platform, trend_id);

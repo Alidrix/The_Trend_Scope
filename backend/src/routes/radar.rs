@@ -54,10 +54,11 @@ pub async fn daily_radar(
     let fetch_limit = limits.daily_trend_limit.unwrap_or(100) as i64;
 
     let trends = sqlx::query(
-        "SELECT id, youtube_id, title, category, region, thumbnail_url, channel_title, description, url, views_per_hour, duration_seconds, published_at, notes\n         FROM videos\n         WHERE ($1::TEXT IS NULL OR region = $1)\n           AND ($2::TEXT IS NULL OR category = $2)\n         ORDER BY views_per_hour DESC LIMIT $3",
+        "SELECT id, platform, youtube_id, title, category, region, thumbnail_url, channel_title, description, url, views_per_hour, duration_seconds, published_at, notes\n         FROM videos\n         WHERE ($1::TEXT IS NULL OR region = $1)\n           AND ($2::TEXT IS NULL OR category = $2)\n           AND ($3::TEXT IS NULL OR platform = $3)\n         ORDER BY views_per_hour DESC LIMIT $4",
     )
     .bind(filters.region.clone())
     .bind(filters.category.clone())
+     .bind(filters.platform.clone())
     .bind(fetch_limit)
     .map(Video::from_row)
     .fetch_all(&state.pool)

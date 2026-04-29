@@ -6,10 +6,11 @@ pub async fn upsert_video(pool: &PgPool, item: &NewVideo) -> Result<(uuid::Uuid,
     let row = sqlx::query(
         r#"
         INSERT INTO videos (
-            id, youtube_id, title, category, region, thumbnail_url, channel_title, description, url,
+            id, platform, youtube_id, title, category, region, thumbnail_url, channel_title, description, url,
             views_per_hour, duration_seconds, published_at, notes, last_seen_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
         ON CONFLICT (youtube_id) DO UPDATE SET
+            platform = EXCLUDED.platform,
             title = EXCLUDED.title,
             category = EXCLUDED.category,
             region = EXCLUDED.region,
@@ -26,6 +27,7 @@ pub async fn upsert_video(pool: &PgPool, item: &NewVideo) -> Result<(uuid::Uuid,
         "#,
     )
     .bind(uuid::Uuid::new_v4())
+     .bind(&item.platform)
     .bind(&item.youtube_id)
     .bind(&item.title)
     .bind(&item.category)
@@ -37,7 +39,7 @@ pub async fn upsert_video(pool: &PgPool, item: &NewVideo) -> Result<(uuid::Uuid,
     .bind(item.views_per_hour)
     .bind(item.duration_seconds)
     .bind(item.published_at)
-    .bind(Option::<String>::None)
+     .bind(Option::<String>::None)
     .fetch_one(pool)
     .await?;
 
@@ -47,13 +49,15 @@ pub async fn upsert_video(pool: &PgPool, item: &NewVideo) -> Result<(uuid::Uuid,
 pub async fn insert_video_stat(
     pool: &PgPool,
     video_id: uuid::Uuid,
+    platform: &str,
     vph: i64,
 ) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO video_stats (id, video_id, views_per_hour, collected_at) VALUES ($1, $2, $3, $4)",
+        "INSERT INTO video_stats (id, video_id, platform, views_per_hour, collected_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(uuid::Uuid::new_v4())
     .bind(video_id)
+    .bind(platform)
     .bind(vph)
     .bind(Utc::now())
     .execute(pool)

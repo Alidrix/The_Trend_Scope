@@ -89,8 +89,13 @@ async fn main() -> Result<(), AppError> {
                             });
 
                             let (video_id, _) = videos::upsert_video(&state.pool, &item).await?;
-                            videos::insert_video_stat(&state.pool, video_id, item.views_per_hour)
-                                .await?;
+                            videos::insert_video_stat(
+                                &state.pool,
+                                video_id,
+                                &item.platform,
+                                item.views_per_hour,
+                            )
+                            .await?;
                             let _ = cache::set_json(
                                 &state.redis,
                                 &cache_key,
