@@ -104,3 +104,16 @@ Vérifier:
 
 ## Let’s Encrypt staging
 Fichier fourni: `infra/traefik/traefik.staging.yml` (avec `caServer` staging). Utiliser ce fichier pour tests afin d'éviter le rate-limit.
+
+## Préflight production
+
+```bash
+cp infra/traefik/dynamic.example.yml infra/traefik/dynamic.yml
+htpasswd -nbB admin 'strong-password'
+nano infra/traefik/dynamic.yml
+./scripts/preflight-prod.sh
+```
+
+Ne jamais déployer le dashboard Traefik sans Basic Auth.
+
+En production Docker, l’API passe par PgBouncer pour limiter le nombre de connexions PostgreSQL. PostgreSQL n’est jamais exposé publiquement.

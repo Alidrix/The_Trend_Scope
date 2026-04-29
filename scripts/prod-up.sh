@@ -6,6 +6,16 @@ if [ ! -f .env.production ]; then
   exit 1
 fi
 
+if [ ! -f infra/traefik/dynamic.yml ]; then
+  echo "Missing infra/traefik/dynamic.yml. Copy infra/traefik/dynamic.example.yml and replace the dashboard auth hash."
+  exit 1
+fi
+
+if grep -q "REPLACE_WITH_BCRYPT_HASH\|replace-with-bcrypt-hash" infra/traefik/dynamic.yml; then
+  echo "Traefik dashboard auth hash is not configured."
+  exit 1
+fi
+
 mkdir -p infra/traefik/acme
 touch infra/traefik/acme/acme.json
 chmod 600 infra/traefik/acme/acme.json

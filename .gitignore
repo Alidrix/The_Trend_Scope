@@ -4,3 +4,6 @@
 /frontend/.svelte-kit
 /.env
 .DS_Store
+
+infra/traefik/dynamic.yml
+.env.production
