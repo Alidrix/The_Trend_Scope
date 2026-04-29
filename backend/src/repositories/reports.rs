@@ -132,3 +132,10 @@ pub async fn user_can_access_export(
             .unwrap_or(false),
     )
 }
+
+pub async fn latest_exports(pool: &PgPool) -> Result<Vec<Report>, AppError> {
+    sqlx::query_as::<_, Report>("SELECT id, title, period_start, period_end, status, file_url, summary, platforms, categories, format, error_message, created_at, completed_at FROM reports WHERE file_url IS NOT NULL ORDER BY created_at DESC LIMIT 50")
+        .fetch_all(pool)
+        .await
+        .map_err(AppError::from)
+}

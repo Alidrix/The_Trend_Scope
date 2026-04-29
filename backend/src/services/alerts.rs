@@ -17,6 +17,63 @@ fn mask_chat_id(value: &str) -> String {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AlertRuleMatchInput {
+    pub platform: Option<String>,
+    pub region: Option<String>,
+    pub category: Option<String>,
+    pub keyword: Option<String>,
+    pub min_views_per_hour: Option<i64>,
+    pub min_trend_score: Option<f64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TrendMatchInput {
+    pub platform: String,
+    pub region: String,
+    pub category: String,
+    pub title: String,
+    pub description: String,
+    pub views_per_hour: i64,
+}
+
+pub fn approximate_trend_score(views_per_hour: i64) -> f64 {
+    (views_per_hour as f64 / 1000.0).min(100.0)
+}
+
+pub fn alert_matches_rule(rule: &AlertRuleMatchInput, trend: &TrendMatchInput) -> bool {
+    let score = approximate_trend_score(trend.views_per_hour);
+    if rule
+        .platform
+        .as_deref()
+        .is_some_and(|x| x != trend.platform)
+        || rule.region.as_deref().is_some_and(|x| x != trend.region)
+        || rule
+            .category
+            .as_deref()
+            .is_some_and(|x| x != trend.category)
+    {
+        return false;
+    }
+    if rule.keyword.as_deref().is_some_and(|k| {
+        !format!(
+            "{} {}",
+            trend.title.to_lowercase(),
+            trend.description.to_lowercase()
+        )
+        .contains(&k.to_lowercase())
+    }) {
+        return false;
+    }
+    if rule
+        .min_views_per_hour
+        .is_some_and(|m| trend.views_per_hour < m)
+        || rule.min_trend_score.is_some_and(|m| score < m)
+    {
+        return false;
+    }
+    true
+}
 pub async fn process_alert_rules_for_recent_trends(
     pool: &PgPool,
     config: &AppConfig,
@@ -34,22 +91,24 @@ pub async fn process_alert_rules_for_recent_trends(
             let vph: i64 = t.get(6);
             let trend_id: String = t.get(0);
             let url: String = t.get(7);
-            let score = ((vph as f64) / 1000.0).min(100.0);
-            if r.platform.as_deref().is_some_and(|x| x != platform)
-                || r.region.as_deref().is_some_and(|x| x != region)
-                || r.category.as_deref().is_some_and(|x| x != category)
-            {
-                continue;
-            }
-            if r.keyword.as_deref().is_some_and(|k| {
-                !format!("{} {}", title.to_lowercase(), desc.to_lowercase())
-                    .contains(&k.to_lowercase())
-            }) {
-                continue;
-            }
-            if r.min_views_per_hour.is_some_and(|m| vph < m)
-                || r.min_trend_score.is_some_and(|m| score < m)
-            {
+            let score = approximate_trend_score(vph);
+            let rule = AlertRuleMatchInput {
+                platform: r.platform.clone(),
+                region: r.region.clone(),
+                category: r.category.clone(),
+                keyword: r.keyword.clone(),
+                min_views_per_hour: r.min_views_per_hour,
+                min_trend_score: r.min_trend_score,
+            };
+            let trend = TrendMatchInput {
+                platform: platform.clone(),
+                region: region.clone(),
+                category: category.clone(),
+                title: title.clone(),
+                description: desc.clone(),
+                views_per_hour: vph,
+            };
+            if !alert_matches_rule(&rule, &trend) {
                 continue;
             }
 

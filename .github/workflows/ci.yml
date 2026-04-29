@@ -165,6 +165,16 @@ jobs:
         run: |
           grep -q "TikTok" README.md
           grep -q "bientôt disponible" README.md
+
+      - name: Go-live stabilization guards
+        run: |
+          test -f .github/workflows/ci-ping.yml
+          grep -q "build_report_summary" backend/src/services/reports.rs
+          grep -q "alert_matches_rule" backend/src/services/alerts.rs
+          grep -q "testAdminTelegram" frontend/src/lib/api.ts
+          grep -q "testAdminSmtp" frontend/src/lib/api.ts
+          test -f frontend/src/routes/admin/ops/+page.svelte
+
       - name: Dump docker logs on failure
         if: failure()
         run: |
