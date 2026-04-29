@@ -21,11 +21,16 @@ use crate::{
         },
         billing::{billing_checkout, billing_portal, billing_status, billing_webhook},
         consents::{get_consents, post_consent},
+        exports::download_export,
         favorites::{add_favorite, delete_favorite, list_favorites},
         health::{health, ready},
         me::{data_export_request, delete_request, get_me, patch_me, save_preferences},
         metrics::metrics,
         notes::update_note,
+        notifications::{
+            list_notifications, mark_all_notifications_read, mark_notification_read,
+            unread_notifications_count,
+        },
         plans::list_plans,
         radar::daily_radar,
         reports::{generate_report, get_report, list_reports},
@@ -145,6 +150,11 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
                     delete_alert(auth, state, path).await
                 }),
             )
+            .route("/api/v1/notifications", get(|auth: AuthBearer, state| async move { list_notifications(auth, state).await }))
+            .route("/api/v1/notifications/unread-count", get(|auth: AuthBearer, state| async move { unread_notifications_count(auth, state).await }))
+            .route("/api/v1/notifications/:id/read", post(|auth: AuthBearer, state, path| async move { mark_notification_read(auth, state, path).await }))
+            .route("/api/v1/notifications/read-all", post(|auth: AuthBearer, state| async move { mark_all_notifications_read(auth, state).await }))
+            .route("/api/v1/exports/:filename", get(|auth: AuthBearer, state, path| async move { download_export(auth, state, path).await }))
             .route(
                 "/api/v1/reports",
                 get(|auth: AuthBearer, state| async move { list_reports(auth, state).await }),

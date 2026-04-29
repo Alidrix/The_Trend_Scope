@@ -1,7 +1,8 @@
 import { get } from 'svelte/store';
 import { token } from './stores/auth';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4443/api/v1';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4443/api/v1';
+export function buildApiUrl(path: string) { return path.startsWith('http') ? path : `${API_BASE}${path}`; }
 
 async function request(path: string, options: RequestInit = {}) {
   const current = get(token);
@@ -96,3 +97,8 @@ export const fetchAdminSources = () => request('/admin/sources');
 export const fetchAdminJobs = () => request('/admin/jobs');
 export const fetchAdminSystem = () => request('/admin/system');
 export const fetchAdminBilling = () => request('/admin/billing');
+
+export const fetchNotifications = () => request('/notifications');
+export const fetchUnreadNotificationsCount = () => request('/notifications/unread-count');
+export const markNotificationRead = (id: string) => request(`/notifications/${id}/read`, { method: 'POST' });
+export const markAllNotificationsRead = () => request('/notifications/read-all', { method: 'POST' });

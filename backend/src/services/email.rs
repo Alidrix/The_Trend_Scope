@@ -1,4 +1,8 @@
-use crate::{error::AppError, repositories::email_logs};
+use crate::{config::SmtpConfig, error::AppError, repositories::email_logs};
+use lettre::{
+    message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
+    AsyncTransport, Message, Tokio1Executor,
+};
 
 fn sanitize_error(err: &str) -> String {
     err.replace(&std::env::var("SMTP_PASSWORD").unwrap_or_default(), "***")
@@ -25,14 +29,13 @@ pub fn render_template(name: &str, cta_url: Option<&str>) -> String {
 
 pub async fn send_email(
     pool: &sqlx::PgPool,
+    smtp: &SmtpConfig,
     user_id: Option<uuid::Uuid>,
     to: &str,
     subject: &str,
     html: &str,
 ) -> Result<(), AppError> {
-    let smtp_host = std::env::var("SMTP_HOST").unwrap_or_default();
-    if smtp_host.is_empty() {
-        tracing::warn!("SMTP is not configured; skipping email send");
+    if !smtp.is_configured() {
         email_logs::log(
             pool,
             user_id,
@@ -45,7 +48,6 @@ pub async fn send_email(
         .await?;
         return Ok(());
     }
-
     if html.is_empty() {
         email_logs::log(
             pool,
@@ -59,30 +61,36 @@ pub async fn send_email(
         .await?;
         return Err(AppError::BadRequest("email body cannot be empty".into()));
     }
-
-    let provider_message_id = format!("local-{}", uuid::Uuid::new_v4());
-    tracing::info!(to, subject, "transactional email queued");
-
-    // Pre-production fallback transport, keeps API stable and logs delivery attempts.
-    let send_result: Result<(), String> = Ok(());
-
-    match send_result {
-        Ok(()) => {
-            email_logs::log(
-                pool,
-                user_id,
-                to,
-                subject,
-                "sent",
-                Some(&provider_message_id),
-                None,
-            )
-            .await?;
+    let from = smtp
+        .from
+        .parse()
+        .map_err(|_| AppError::Config("SMTP_FROM invalid".into()))?;
+    let to_mail = to
+        .parse()
+        .map_err(|_| AppError::BadRequest("invalid email".into()))?;
+    let msg = Message::builder()
+        .from(from)
+        .to(to_mail)
+        .subject(subject)
+        .header(ContentType::TEXT_HTML)
+        .body(html.to_string())
+        .map_err(|_| AppError::Internal)?;
+    let creds = Credentials::new(smtp.username.clone(), smtp.password.clone());
+    let builder = if smtp.tls {
+        AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp.host).map_err(|_| AppError::Internal)?
+    } else {
+        AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&smtp.host)
+    };
+    let mailer = builder.port(smtp.port).credentials(creds).build();
+    match mailer.send(msg).await {
+        Ok(r) => {
+            let mid = format!("{:?}", r.message_id());
+            email_logs::log(pool, user_id, to, subject, "sent", Some(&mid), None).await?;
             Ok(())
         }
-        Err(err) => {
-            let sanitized = sanitize_error(&err);
-            email_logs::log(pool, user_id, to, subject, "failed", None, Some(&sanitized)).await?;
+        Err(e) => {
+            let se = sanitize_error(&e.to_string());
+            email_logs::log(pool, user_id, to, subject, "failed", None, Some(&se)).await?;
             Err(AppError::Internal)
         }
     }

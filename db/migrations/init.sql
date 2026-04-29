@@ -348,3 +348,17 @@ ALTER TABLE alert_deliveries ADD COLUMN IF NOT EXISTS platform TEXT;
 ALTER TABLE alert_deliveries ADD COLUMN IF NOT EXISTS error_message TEXT;
 CREATE INDEX IF NOT EXISTS idx_alert_deliveries_status ON alert_deliveries(status);
 CREATE INDEX IF NOT EXISTS idx_alert_rules_enabled ON alert_rules(enabled);
+
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'info',
+    payload JSONB NOT NULL DEFAULT '{}',
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id_created_at ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read_at IS NULL;

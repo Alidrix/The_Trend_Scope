@@ -16,6 +16,7 @@ pub mod repositories {
     pub mod email_logs;
     pub mod email_verification;
     pub mod favorites;
+    pub mod notifications;
     pub mod password_reset;
     pub mod reports;
     pub mod stripe_events;
@@ -31,11 +32,13 @@ pub mod routes {
     pub mod auth;
     pub mod billing;
     pub mod consents;
+    pub mod exports;
     pub mod favorites;
     pub mod health;
     pub mod me;
     pub mod metrics;
     pub mod notes;
+    pub mod notifications;
     pub mod plans;
     pub mod radar;
     pub mod reports;

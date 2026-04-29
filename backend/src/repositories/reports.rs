@@ -107,3 +107,28 @@ pub async fn jobs_snapshot(pool: &PgPool) -> Result<serde_json::Value, AppError>
         "recent_alert_deliveries": []
     }))
 }
+
+pub async fn user_can_access_export(
+    pool: &PgPool,
+    user_id: uuid::Uuid,
+    is_admin: bool,
+    filename: &str,
+) -> Result<bool, AppError> {
+    if is_admin {
+        return Ok(
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM reports WHERE file_url=$1)")
+                .bind(format!("/api/v1/exports/{filename}"))
+                .fetch_one(pool)
+                .await
+                .unwrap_or(false),
+        );
+    }
+    Ok(
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM reports WHERE user_id=$1 AND file_url=$2)")
+            .bind(user_id)
+            .bind(format!("/api/v1/exports/{filename}"))
+            .fetch_one(pool)
+            .await
+            .unwrap_or(false),
+    )
+}

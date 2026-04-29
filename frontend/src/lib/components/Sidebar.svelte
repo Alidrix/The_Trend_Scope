@@ -7,6 +7,7 @@
     ['Favoris', '/favorites'],
     ['Watchlist', '/watchlist'],
     ['Alertes', '/alerts'],
+    ['Notifications', '/notifications'],
     ['Rapports', '/reports'],
     ['Abonnement', '/subscription'],
     ['Paramètres', '/settings']

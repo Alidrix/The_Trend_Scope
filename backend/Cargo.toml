@@ -31,6 +31,8 @@ validator = { version = "0.18", features = ["derive"] }
 hex = "0.4"
 sha2 = "0.10"
 hmac = "0.12"
+csv = "1.3"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
 
 [dev-dependencies]
 axum = { version = "0.7", features = ["macros", "json"] }

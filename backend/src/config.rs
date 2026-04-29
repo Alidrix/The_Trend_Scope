@@ -90,6 +90,36 @@ pub struct TelegramConfig {
     pub default_chat_id: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct SmtpConfig {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+    pub from: String,
+    pub tls: bool,
+}
+
+impl SmtpConfig {
+    pub fn is_configured(&self) -> bool {
+        !self.host.is_empty()
+            && !self.username.is_empty()
+            && !self.password.is_empty()
+            && !self.from.is_empty()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct StorageConfig {
+    pub s3_endpoint: String,
+    pub s3_region: String,
+    pub s3_bucket: String,
+    pub s3_access_key_id: String,
+    pub s3_secret_access_key: String,
+    pub s3_force_path_style: bool,
+    pub local_exports_dir: String,
+}
+
 #[derive(Clone)]
 pub struct ScanConfig {
     pub interval_minutes: u64,
@@ -108,6 +138,8 @@ pub struct AppConfig {
     pub tiktok: TiktokConfig,
     pub instagram: InstagramConfig,
     pub telegram: TelegramConfig,
+    pub smtp: SmtpConfig,
+    pub storage: StorageConfig,
     pub scan: ScanConfig,
 }
 
@@ -150,6 +182,31 @@ impl AppConfig {
             telegram: TelegramConfig {
                 bot_token: std::env::var("TELEGRAM_BOT_TOKEN").unwrap_or_default(),
                 default_chat_id: std::env::var("TELEGRAM_DEFAULT_CHAT_ID").unwrap_or_default(),
+            },
+            smtp: SmtpConfig {
+                host: std::env::var("SMTP_HOST").unwrap_or_default(),
+                port: std::env::var("SMTP_PORT")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(587),
+                username: std::env::var("SMTP_USERNAME").unwrap_or_default(),
+                password: std::env::var("SMTP_PASSWORD").unwrap_or_default(),
+                from: std::env::var("SMTP_FROM").unwrap_or_default(),
+                tls: std::env::var("SMTP_TLS")
+                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                    .unwrap_or(true),
+            },
+            storage: StorageConfig {
+                s3_endpoint: std::env::var("S3_ENDPOINT").unwrap_or_default(),
+                s3_region: std::env::var("S3_REGION").unwrap_or_default(),
+                s3_bucket: std::env::var("S3_BUCKET").unwrap_or_default(),
+                s3_access_key_id: std::env::var("S3_ACCESS_KEY_ID").unwrap_or_default(),
+                s3_secret_access_key: std::env::var("S3_SECRET_ACCESS_KEY").unwrap_or_default(),
+                s3_force_path_style: std::env::var("S3_FORCE_PATH_STYLE")
+                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                    .unwrap_or(true),
+                local_exports_dir: std::env::var("LOCAL_EXPORTS_DIR")
+                    .unwrap_or_else(|_| "exports".to_string()),
             },
             scan: ScanConfig {
                 interval_minutes: std::env::var("SCAN_INTERVAL_MINUTES")

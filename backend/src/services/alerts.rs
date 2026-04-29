@@ -1,7 +1,7 @@
 use crate::{
     config::AppConfig,
     error::AppError,
-    repositories::alerts,
+    repositories::{alerts, notifications},
     services::{
         email,
         telegram::{send_telegram_alert, TelegramAlertMessage},
@@ -56,17 +56,18 @@ pub async fn process_alert_rules_for_recent_trends(
             let mut status = "logged";
             let mut payload = serde_json::json!({"channel":r.channel,"title":title,"platform":platform,"views_per_hour":vph});
             match r.channel.as_str() {
-                "web" => status = "logged",
+                "web" => { status = "logged"; let _ = notifications::create(pool, r.user_id, "Nouvelle tendance détectée", &format!("{} accélère sur {}", title, platform), "trend_alert", serde_json::json!({"trend_id": trend_id,"platform": platform,"views_per_hour": vph,"url": url})).await?; },
                 "email" => {
                     if std::env::var("SMTP_HOST").unwrap_or_default().is_empty() {
                         status = "skipped";
                         payload["error_message"] = serde_json::json!("SMTP is not configured");
                     } else if email::send_email(
                         pool,
+                        &config.smtp,
                         Some(r.user_id),
                         &r.user_email_or_username,
                         &format!("Alerte tendance: {}", title),
-                        &format!("<p>{}</p>", title),
+                        &format!("<h1>Nouvelle tendance détectée</h1><p><strong>{}</strong></p><p>Plateforme : {}</p><p>Vues / heure : {}</p>", title, platform, vph),
                     )
                     .await
                     .is_ok()

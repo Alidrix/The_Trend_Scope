@@ -1,4 +1,4 @@
-use crate::error::AppError;
+use crate::{error::AppError, services::storage};
 use sqlx::{PgPool, Row};
 
 pub async fn process_pending_reports(pool: &PgPool) -> Result<u64, AppError> {
@@ -21,8 +21,46 @@ pub async fn process_pending_reports(pool: &PgPool) -> Result<u64, AppError> {
                 } else {
                     0
                 };
-                let summary = serde_json::json!({"top_platforms":platforms,"top_categories":categories,"top_trends":rows.iter().map(|x|serde_json::json!({"title":x.get::<String,_>(0),"platform":x.get::<String,_>(1),"category":x.get::<String,_>(2),"region":x.get::<String,_>(3),"views_per_hour":x.get::<i64,_>(4)})).collect::<Vec<_>>(),"kpis":{"total_trends":total,"average_views_per_hour":avg,"strong_opportunities":rows.iter().filter(|x| x.get::<i64,_>(4)>=10000).count()},"recommendations":["Surveiller les tendances business en forte accélération.","Préparer des formats courts autour des catégories dominantes."],"file_generation": if format=="json" {serde_json::Value::Null} else {serde_json::json!("planned")} });
-                sqlx::query("UPDATE reports SET status='completed', summary=$2, file_url=NULL, completed_at=NOW(), error_message=NULL WHERE id=$1").bind(id).bind(summary).execute(pool).await?;
+                let top_trends=rows.iter().map(|x|serde_json::json!({"title":x.get::<String,_>(0),"platform":x.get::<String,_>(1),"category":x.get::<String,_>(2),"region":x.get::<String,_>(3),"views_per_hour":x.get::<i64,_>(4)})).collect::<Vec<_>>();
+                let mut summary = serde_json::json!({"top_platforms":platforms,"top_categories":categories,"top_trends":top_trends,"kpis":{"total_trends":total,"average_views_per_hour":avg,"strong_opportunities":rows.iter().filter(|x| x.get::<i64,_>(4)>=10000).count()},"recommendations":["Surveiller les tendances business en forte accélération.","Préparer des formats courts autour des catégories dominantes."] });
+                let mut file_url = None;
+                if format == "csv" {
+                    let mut w = csv::Writer::from_writer(vec![]);
+                    w.write_record(["title", "platform", "category", "region", "views_per_hour"])
+                        .ok();
+                    for t in &top_trends {
+                        w.write_record([
+                            t["title"].as_str().unwrap_or(""),
+                            t["platform"].as_str().unwrap_or(""),
+                            t["category"].as_str().unwrap_or(""),
+                            t["region"].as_str().unwrap_or(""),
+                            &t["views_per_hour"].to_string(),
+                        ])
+                        .ok();
+                    }
+                    let data = w.into_inner().unwrap_or_default();
+                    let filename = format!("report-{}.csv", id);
+                    file_url = Some(
+                        storage::store_local_export(
+                            &crate::config::StorageConfig {
+                                s3_endpoint: String::new(),
+                                s3_region: String::new(),
+                                s3_bucket: String::new(),
+                                s3_access_key_id: String::new(),
+                                s3_secret_access_key: String::new(),
+                                s3_force_path_style: true,
+                                local_exports_dir: std::env::var("LOCAL_EXPORTS_DIR")
+                                    .unwrap_or_else(|_| "exports".into()),
+                            },
+                            &filename,
+                            &data,
+                        )
+                        .await?,
+                    );
+                } else if format == "pdf" {
+                    summary["file_generation"] = serde_json::json!("pdf_planned");
+                }
+                sqlx::query("UPDATE reports SET status='completed', summary=$2, file_url=$3, completed_at=NOW(), error_message=NULL WHERE id=$1").bind(id).bind(summary).bind(file_url).execute(pool).await?;
                 done += 1;
             }
             Err(e) => {
