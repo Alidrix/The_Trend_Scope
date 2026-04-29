@@ -61,6 +61,12 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - trend-scope-private
 
@@ -104,7 +110,7 @@ services:
     command: ["/app/api"]
     depends_on:
       pgbouncer:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
       nats:
@@ -124,9 +130,10 @@ services:
       - "traefik.http.services.backend.loadbalancer.server.port=4443"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4443/api/v1/health"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 45s
     networks:
       - trend-scope-private
 
@@ -137,6 +144,8 @@ services:
     env_file: .env.production
     command: ["/app/worker"]
     depends_on:
+      backend:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:

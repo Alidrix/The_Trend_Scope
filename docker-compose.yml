@@ -31,6 +31,12 @@ services:
     ports:
       - '6432:5432'
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -79,7 +85,7 @@ services:
       - '4443:4443'
     depends_on:
       pgbouncer:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
       nats:
@@ -89,10 +95,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4443/api/v1/health"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 25s
+      retries: 12
+      start_period: 45s
 
   worker:
     build:
@@ -101,6 +107,8 @@ services:
     command: ["/app/worker"]
     env_file: .env
     depends_on:
+      backend:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
