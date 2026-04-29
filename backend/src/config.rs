@@ -73,6 +73,18 @@ pub struct YoutubeConfig {
 }
 
 #[derive(Clone)]
+pub struct TiktokConfig {
+    pub api_key: String,
+    pub api_base: String,
+}
+
+#[derive(Clone)]
+pub struct InstagramConfig {
+    pub api_key: String,
+    pub api_base: String,
+}
+
+#[derive(Clone)]
 pub struct ScanConfig {
     pub interval_minutes: u64,
 }
@@ -87,6 +99,8 @@ pub struct AppConfig {
     pub nats: NatsConfig,
     pub clickhouse: ClickHouseConfig,
     pub youtube: YoutubeConfig,
+    pub tiktok: TiktokConfig,
+    pub instagram: InstagramConfig,
     pub scan: ScanConfig,
 }
 
@@ -118,6 +132,14 @@ impl AppConfig {
                     .unwrap_or_else(|_| "viral".to_string()),
             },
             youtube: YoutubeConfig::from_env(),
+            tiktok: TiktokConfig {
+                api_key: std::env::var("TIKTOK_API_KEY").unwrap_or_default(),
+                api_base: std::env::var("TIKTOK_API_BASE").unwrap_or_default(),
+            },
+            instagram: InstagramConfig {
+                api_key: std::env::var("INSTAGRAM_API_KEY").unwrap_or_default(),
+                api_base: std::env::var("INSTAGRAM_API_BASE").unwrap_or_default(),
+            },
             scan: ScanConfig {
                 interval_minutes: std::env::var("SCAN_INTERVAL_MINUTES")
                     .ok()
@@ -165,4 +187,15 @@ pub fn normalize_database_url() -> Result<String, AppError> {
     }
 
     Ok(url)
+}
+
+impl TiktokConfig {
+    pub fn is_configured(&self) -> bool {
+        !self.api_key.is_empty() && !self.api_base.is_empty()
+    }
+}
+impl InstagramConfig {
+    pub fn is_configured(&self) -> bool {
+        !self.api_key.is_empty() && !self.api_base.is_empty()
+    }
 }

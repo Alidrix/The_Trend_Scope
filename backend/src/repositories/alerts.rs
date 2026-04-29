@@ -91,3 +91,12 @@ pub async fn delete(pool: &PgPool, user_id: uuid::Uuid, id: uuid::Uuid) -> Resul
         .await?;
     Ok(())
 }
+
+pub async fn count_pending_deliveries(pool: &PgPool) -> Result<i64, AppError> {
+    Ok(
+        sqlx::query_scalar("SELECT COUNT(*) FROM alert_deliveries WHERE status='pending'")
+            .fetch_one(pool)
+            .await
+            .unwrap_or(0),
+    )
+}

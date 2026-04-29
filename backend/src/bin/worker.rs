@@ -5,7 +5,7 @@ use youtube_tiktok_backend::{
     config::AppConfig,
     error::AppError,
     repositories::videos,
-    services::{analytics, cache, queue, scoring, youtube},
+    services::{alerts, analytics, cache, queue, reports, scoring, youtube},
     state::AppState,
 };
 
@@ -112,6 +112,13 @@ async fn main() -> Result<(), AppError> {
                     Err(err) => error!(region, theme, ?err, "youtube scan failed"),
                 }
             }
+        }
+
+        if let Err(err) = reports::process_pending_reports(&state.pool).await {
+            error!(?err, "pending reports processing failed");
+        }
+        if let Err(err) = alerts::process_alert_rules_for_recent_trends(&state.pool).await {
+            error!(?err, "alert rules processing failed");
         }
 
         let _: () = redis::cmd("DEL")

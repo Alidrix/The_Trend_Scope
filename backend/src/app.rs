@@ -11,8 +11,8 @@ use crate::{
     repositories::users::ensure_seed_user,
     routes::{
         admin::{
-            jobs as admin_jobs, overview as admin_overview, sources as admin_sources,
-            system as admin_system, users as admin_users,
+            billing as admin_billing, jobs as admin_jobs, overview as admin_overview,
+            sources as admin_sources, system as admin_system, users as admin_users,
         },
         alerts::{create_alert, delete_alert, list_alerts, update_alert},
         auth::{
@@ -167,7 +167,7 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
             )
             .route(
                 "/api/v1/admin/users",
-                get(|auth: AuthBearer, state| async move { admin_users(auth, state).await }),
+                get(|auth: AuthBearer, state, query| async move { admin_users(auth, state, query).await }),
             )
             .route(
                 "/api/v1/admin/sources",
@@ -180,6 +180,10 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
             .route(
                 "/api/v1/admin/system",
                 get(|auth: AuthBearer, state| async move { admin_system(auth, state).await }),
+            )
+            .route(
+                "/api/v1/admin/billing",
+                get(|auth: AuthBearer, state| async move { admin_billing(auth, state).await }),
             )
             .layer(
                 CorsLayer::new()

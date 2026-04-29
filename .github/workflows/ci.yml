@@ -132,6 +132,12 @@ jobs:
             echo "reports page still contains hardcoded Weekly report"
             exit 1
           fi
+          grep -q "process_pending_reports" backend/src/bin/worker.rs
+          grep -q "process_alert_rules_for_recent_trends" backend/src/bin/worker.rs
+          grep -q "fetchAdminUsers" frontend/src/lib/api.ts
+          grep -q "fetchAdminSources" frontend/src/lib/api.ts
+          grep -q "platforms TEXT\[]" db/migrations/init.sql
+          grep -q "format TEXT" db/migrations/init.sql
 
       - name: Validate Traefik and preflight files
         run: |

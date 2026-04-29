@@ -82,3 +82,17 @@ export const requestDeleteAccount = () => request('/me/delete-request', { method
 
 export const resendVerification = (email: string) => request('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) });
 export const verifyEmail = (tokenValue: string) => request('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token: tokenValue }) });
+
+export type Platform = 'youtube' | 'tiktok' | 'instagram';
+export type ReportFormat = 'json' | 'csv' | 'pdf';
+
+export const fetchAdminOverview = () => request('/admin/overview');
+export const fetchAdminUsers = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => query.set(k, String(v)));
+  return request(`/admin/users${query.toString() ? `?${query.toString()}` : ''}`);
+};
+export const fetchAdminSources = () => request('/admin/sources');
+export const fetchAdminJobs = () => request('/admin/jobs');
+export const fetchAdminSystem = () => request('/admin/system');
+export const fetchAdminBilling = () => request('/admin/billing');

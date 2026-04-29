@@ -44,12 +44,14 @@ pub mod routes {
 }
 pub mod services {
     pub mod access;
+    pub mod alerts;
     pub mod analytics;
     pub mod cache;
     pub mod email;
     pub mod privacy;
     pub mod queue;
     pub mod rate_limit;
+    pub mod reports;
     pub mod scoring;
     pub mod stripe;
     pub mod youtube;
