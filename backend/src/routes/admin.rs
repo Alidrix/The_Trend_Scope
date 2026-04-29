@@ -115,15 +115,7 @@ pub async fn system(
         "error"
     };
     let nats = "ok";
-    let clickhouse = if sqlx::query_scalar::<_, i64>("SELECT 1")
-        .fetch_one(&state.pool)
-        .await
-        .is_ok()
-    {
-        "configured"
-    } else {
-        "configured"
-    };
+    let clickhouse = "configured";
     Ok(Json(
         json!({"postgres":postgres,"redis":redis,"nats":nats,"clickhouse":clickhouse}),
     ))
