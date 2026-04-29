@@ -100,3 +100,26 @@ pub async fn count_pending_deliveries(pool: &PgPool) -> Result<i64, AppError> {
             .unwrap_or(0),
     )
 }
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct AlertRuleWithUser {
+    pub id: uuid::Uuid,
+    pub user_id: uuid::Uuid,
+    pub user_email_or_username: String,
+    pub name: String,
+    pub platform: Option<String>,
+    pub region: Option<String>,
+    pub category: Option<String>,
+    pub keyword: Option<String>,
+    pub min_views_per_hour: Option<i64>,
+    pub min_trend_score: Option<f64>,
+    pub channel: String,
+    pub enabled: bool,
+}
+
+pub async fn list_enabled(pool: &PgPool) -> Result<Vec<AlertRuleWithUser>, AppError> {
+    sqlx::query_as::<_, AlertRuleWithUser>("SELECT ar.id, ar.user_id, u.username as user_email_or_username, ar.name, ar.platform, ar.region, ar.category, ar.keyword, ar.min_views_per_hour, ar.min_trend_score, ar.channel, ar.enabled FROM alert_rules ar JOIN users u ON u.id=ar.user_id WHERE ar.enabled=true")
+        .fetch_all(pool)
+        .await
+        .map_err(AppError::from)
+}

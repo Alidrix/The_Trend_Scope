@@ -1,16 +1,1 @@
-<script lang="ts">
-  import AppShell from '$lib/components/AppShell.svelte';
-  import { currentUser } from '$lib/stores/user';
-</script>
-<AppShell>
-{#if !$currentUser}
-  <h1>Connexion requise</h1>
-  <p>Veuillez vous connecter pour accéder à cette page.</p>
-{:else if $currentUser.role !== 'admin'}
-  <h1>Accès restreint</h1>
-  <p>L’espace admin est réservé aux administrateurs.</p>
-{:else}
-  <h1>Admin</h1>
-  <p>Endpoints admin accessibles.</p>
-{/if}
-</AppShell>
+<script lang='ts'>import {onMount} from 'svelte';import AppShell from '$lib/components/AppShell.svelte';import {currentUser} from '$lib/stores/user';import {fetchAdminSystem} from '$lib/api';import StatusBadge from '$lib/components/StatusBadge.svelte';let d:any={};onMount(async()=>d=await fetchAdminSystem());</script><AppShell>{#if $currentUser?.role!=='admin'}<p>Accès restreint</p>{:else}<p>PostgreSQL <StatusBadge status={d.postgres||'error'}/></p><p>Redis <StatusBadge status={d.redis||'error'}/></p><p>NATS <StatusBadge status={d.nats||'configured'}/></p><p>ClickHouse <StatusBadge status={d.clickhouse||'configured'}/></p><p>ClickHouse peut être affiché comme configured si aucun check actif n’est encore exécuté.</p>{/if}</AppShell>

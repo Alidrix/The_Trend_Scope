@@ -1,16 +1,3 @@
-<script lang="ts">
-  import AppShell from '$lib/components/AppShell.svelte';
-  import { currentUser } from '$lib/stores/user';
-</script>
-<AppShell>
-{#if !$currentUser}
-  <h1>Connexion requise</h1>
-  <p>Veuillez vous connecter pour accéder à cette page.</p>
-{:else if $currentUser.role !== 'admin'}
-  <h1>Accès restreint</h1>
-  <p>L’espace admin est réservé aux administrateurs.</p>
-{:else}
-  <h1>Admin</h1>
-  <p>Endpoints admin accessibles.</p>
-{/if}
-</AppShell>
+<script lang="ts">import {onMount} from 'svelte'; import AppShell from '$lib/components/AppShell.svelte'; import PageHeader from '$lib/components/PageHeader.svelte'; import AdminStatCard from '$lib/components/AdminStatCard.svelte'; import {currentUser} from '$lib/stores/user'; import {fetchAdminOverview} from '$lib/api'; let loading=false; let error=''; let data:any=null; const load=async()=>{loading=true;error='';try{data=await fetchAdminOverview();}catch(e){error=(e as Error).message}finally{loading=false}}; onMount(load);</script>
+<AppShell>{#if !$currentUser}<h1>Connexion requise</h1>{:else if $currentUser.role!=='admin'}<h1>Accès restreint</h1>{:else}<PageHeader title="Admin" subtitle="Pilotage de The Trend Scope"/><button on:click={load}>Refresh</button>{#if loading}<p>loading…</p>{/if}{#if error}<p>{error}</p>{/if}{#if data}<div class="g"> <AdminStatCard label="Total users" value={data.users.total}/><AdminStatCard label="Free" value={data.plans.free}/><AdminStatCard label="Pro" value={data.plans.pro}/><AdminStatCard label="Studio" value={data.plans.studio}/><AdminStatCard label="Active subscriptions" value={data.subscriptions.active}/><AdminStatCard label="Pending reports" value={data.jobs.pending_reports}/></div>{/if}{/if}</AppShell>
+<style>.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.8rem}</style>

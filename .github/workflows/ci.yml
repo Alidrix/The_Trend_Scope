@@ -94,6 +94,27 @@ jobs:
           grep -q "frontend/static/brand/trend-scope-logo-light.png" README.md
           grep -q "frontend/static/brand/trend-scope-logo-dark.png" README.md
 
+
+      - name: Studio business guards
+        run: |
+          if ! grep -q "process_pending_reports" backend/src/services/reports.rs; then
+            echo "Reports service must expose process_pending_reports"
+            exit 1
+          fi
+          if grep -q "pub async fn process_alert_rules_for_recent_trends(_pool: &PgPool) -> Result<u64, AppError> {
+    Ok(0)" backend/src/services/alerts.rs; then
+            echo "Alerts service must not be a pure Ok(0) placeholder"
+            exit 1
+          fi
+          if grep -q "Endpoints admin accessibles" frontend/src/routes/admin/+page.svelte; then
+            echo "Admin UI must not be placeholder"
+            exit 1
+          fi
+          if grep -q "keywords:\[\]" frontend/src/routes/watchlist/+page.svelte; then
+            echo "Watchlist UI must use real keywords"
+            exit 1
+          fi
+
       - name: Dump docker logs on failure
         if: failure()
         run: |

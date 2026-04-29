@@ -1,0 +1,1 @@
+<script lang="ts">import StatusBadge from './StatusBadge.svelte'; export let item:any;</script><article><h3>{item.title}</h3><StatusBadge status={item.status} /><p>{item.format} · {(item.platforms||[]).join(',')}</p>{#if item.format!=='json' && !item.file_url}<p>Génération fichier à venir.</p>{/if}</article>

@@ -1,16 +1,1 @@
-<script lang="ts">
-  import AppShell from '$lib/components/AppShell.svelte';
-  import { currentUser } from '$lib/stores/user';
-</script>
-<AppShell>
-{#if !$currentUser}
-  <h1>Connexion requise</h1>
-  <p>Veuillez vous connecter pour accéder à cette page.</p>
-{:else if $currentUser.role !== 'admin'}
-  <h1>Accès restreint</h1>
-  <p>L’espace admin est réservé aux administrateurs.</p>
-{:else}
-  <h1>Admin</h1>
-  <p>Endpoints admin accessibles.</p>
-{/if}
-</AppShell>
+<script lang='ts'>import {onMount} from 'svelte';import AppShell from '$lib/components/AppShell.svelte';import {currentUser} from '$lib/stores/user';import {fetchAdminSources} from '$lib/api';import StatusBadge from '$lib/components/StatusBadge.svelte';let rows:any[]=[];onMount(async()=>{const r=await fetchAdminSources();rows=r.sources||[]});</script><AppShell>{#if $currentUser?.role!=='admin'}<p>Accès restreint</p>{:else}{#each rows as s}<p>{s.platform} <StatusBadge status={s.status}/> — {s.message}</p>{/each}<p>Configurer les clés dans .env.production</p>{/if}</AppShell>

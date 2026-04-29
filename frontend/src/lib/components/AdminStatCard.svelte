@@ -1,0 +1,1 @@
+<script lang="ts">export let label=''; export let value='0';</script><div><p>{label}</p><strong>{value}</strong></div><style>div{border:1px solid var(--border);padding:.8rem;border-radius:12px}</style>

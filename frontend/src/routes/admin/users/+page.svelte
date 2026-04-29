@@ -1,16 +1,1 @@
-<script lang="ts">
-  import AppShell from '$lib/components/AppShell.svelte';
-  import { currentUser } from '$lib/stores/user';
-</script>
-<AppShell>
-{#if !$currentUser}
-  <h1>Connexion requise</h1>
-  <p>Veuillez vous connecter pour accéder à cette page.</p>
-{:else if $currentUser.role !== 'admin'}
-  <h1>Accès restreint</h1>
-  <p>L’espace admin est réservé aux administrateurs.</p>
-{:else}
-  <h1>Admin</h1>
-  <p>Endpoints admin accessibles.</p>
-{/if}
-</AppShell>
+<script lang='ts'>import {onMount} from 'svelte';import AppShell from '$lib/components/AppShell.svelte';import {currentUser} from '$lib/stores/user';import {fetchAdminUsers} from '$lib/api';import DataTable from '$lib/components/DataTable.svelte'; let users:any[]=[];let plan='all';let role='all';let search='';let error=''; const cols=[{key:'username',label:'Username'},{key:'role',label:'Rôle'},{key:'plan',label:'Plan'},{key:'email_verified',label:'Email vérifié'},{key:'subscription_status',label:'Statut abonnement'},{key:'created_at',label:'Créé le'}]; async function load(){try{const r=await fetchAdminUsers({page:1,page_size:50,plan:plan==='all'?'':plan,role:role==='all'?'':role,search});users=r.users||[]}catch(e){error=(e as Error).message}} onMount(load);</script><AppShell>{#if $currentUser?.role!=='admin'}<p>Accès restreint</p>{:else}<input bind:value={search} placeholder='Recherche'/><select bind:value={plan}><option>all</option><option>free</option><option>pro</option><option>studio</option></select><select bind:value={role}><option>all</option><option>user</option><option>admin</option></select><button on:click={load}>Refresh</button>{#if error}<p>{error}</p>{/if}<DataTable columns={cols} rows={users}/>{/if}</AppShell>

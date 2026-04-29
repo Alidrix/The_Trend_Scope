@@ -1,0 +1,3 @@
+<script lang="ts">import {createEventDispatcher} from 'svelte'; export let options:string[]=[]; export let selected:string[]=[]; export let label=''; const d=createEventDispatcher<{change:string[]}>(); function t(v:string){selected=selected.includes(v)?selected.filter(x=>x!==v):[...selected,v]; d('change',selected);}</script>
+<p>{label}</p><div>{#each options as o}<button type="button" class:sel={selected.includes(o)} on:click={()=>t(o)}>{o}</button>{/each}</div>
+<style>button{margin:.2rem;padding:.35rem .65rem;border-radius:999px;border:1px solid var(--border);background:var(--surface)}.sel{background:var(--primary);color:white}</style>

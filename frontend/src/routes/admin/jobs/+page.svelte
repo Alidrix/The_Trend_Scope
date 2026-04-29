@@ -1,16 +1,1 @@
-<script lang="ts">
-  import AppShell from '$lib/components/AppShell.svelte';
-  import { currentUser } from '$lib/stores/user';
-</script>
-<AppShell>
-{#if !$currentUser}
-  <h1>Connexion requise</h1>
-  <p>Veuillez vous connecter pour accéder à cette page.</p>
-{:else if $currentUser.role !== 'admin'}
-  <h1>Accès restreint</h1>
-  <p>L’espace admin est réservé aux administrateurs.</p>
-{:else}
-  <h1>Admin</h1>
-  <p>Endpoints admin accessibles.</p>
-{/if}
-</AppShell>
+<script lang='ts'>import {onMount} from 'svelte';import AppShell from '$lib/components/AppShell.svelte';import {currentUser} from '$lib/stores/user';import {fetchAdminJobs} from '$lib/api';let d:any={};onMount(async()=>d=await fetchAdminJobs());</script><AppShell>{#if $currentUser?.role!=='admin'}<p>Accès restreint</p>{:else}<p>Pending reports: {d.pending_reports ?? 0}</p><p>Completed reports 24h: {d.completed_reports_24h ?? 0}</p><p>Pending alert deliveries: {d.pending_alert_deliveries ?? 0}</p><p>Sent alert deliveries 24h: {d.sent_alert_deliveries_24h ?? 0}</p>{/if}</AppShell>

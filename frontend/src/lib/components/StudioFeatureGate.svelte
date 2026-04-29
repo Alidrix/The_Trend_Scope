@@ -1,0 +1,2 @@
+<script lang="ts">export let plan='free'; export let requiredPlan:'pro'|'studio'='studio'; export let title='Fonctionnalité Studio'; export let description=''; const rank={free:0,pro:1,studio:2}; $: allowed=(rank[plan]??0)>=rank[requiredPlan];</script>
+{#if allowed}<slot />{:else}<div><h3>{title}</h3><p>{description}</p><a href="/subscription">Passer {requiredPlan==='studio'?'Studio':'Pro'}</a></div>{/if}

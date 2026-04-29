@@ -1,0 +1,1 @@
+<script lang="ts">export let item:any; export let onDelete:()=>void;</script><article><h3>{item.name}</h3><p>Mots-clés: {(item.keywords||[]).join(', ')||'—'}</p><button on:click={onDelete}>Supprimer</button></article>

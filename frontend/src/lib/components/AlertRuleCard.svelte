@@ -1,0 +1,1 @@
+<script lang="ts">import StatusBadge from './StatusBadge.svelte'; export let item:any; export let onDelete:()=>void;</script><article><h3>{item.name}</h3><StatusBadge status={item.enabled?'active':'inactive'} /><p>{item.platform} · {item.channel}</p><button on:click={onDelete}>Supprimer</button></article>
