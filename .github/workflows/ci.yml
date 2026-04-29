@@ -1,10 +1,41 @@
 name: CI
 
 on:
+  workflow_dispatch:
+
   push:
+    branches:
+      - main
+      - "codex/**"
+      - "feature/**"
+      - "fix/**"
+
   pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
+  ci-started:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print CI context
+        run: |
+          echo "CI started"
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "sha=${{ github.sha }}"
+          echo "actor=${{ github.actor }}"
+
   backend:
     runs-on: ubuntu-latest
     defaults:
