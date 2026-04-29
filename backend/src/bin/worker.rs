@@ -114,7 +114,8 @@ async fn main() -> Result<(), AppError> {
             }
         }
 
-        if let Err(err) = reports::process_pending_reports(&state.pool).await {
+        if let Err(err) = reports::process_pending_reports(&state.pool, &state.config.storage).await
+        {
             error!(?err, "pending reports processing failed");
         }
         if let Err(err) =

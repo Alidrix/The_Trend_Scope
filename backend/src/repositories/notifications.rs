@@ -70,3 +70,17 @@ pub async fn mark_all_read(pool: &PgPool, user_id: uuid::Uuid) -> Result<(), App
         .await?;
     Ok(())
 }
+
+pub async fn admin_snapshot(pool: &PgPool) -> Result<serde_json::Value, AppError> {
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM notifications")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
+    let unread: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM notifications WHERE read_at IS NULL")
+            .fetch_one(pool)
+            .await
+            .unwrap_or(0);
+    let latest = sqlx::query_as::<_, Notification>("SELECT id,user_id,title,body,type,payload,read_at,created_at FROM notifications ORDER BY created_at DESC LIMIT 20").fetch_all(pool).await.unwrap_or_default();
+    Ok(serde_json::json!({"total": total, "unread": unread, "latest": latest}))
+}

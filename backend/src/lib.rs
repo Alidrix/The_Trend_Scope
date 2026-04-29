@@ -56,6 +56,7 @@ pub mod services {
     pub mod rate_limit;
     pub mod reports;
     pub mod scoring;
+    pub mod storage;
     pub mod stripe;
     pub mod telegram;
     pub mod youtube;

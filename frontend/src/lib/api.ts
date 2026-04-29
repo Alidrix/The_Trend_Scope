@@ -102,3 +102,11 @@ export const fetchNotifications = () => request('/notifications');
 export const fetchUnreadNotificationsCount = () => request('/notifications/unread-count');
 export const markNotificationRead = (id: string) => request(`/notifications/${id}/read`, { method: 'POST' });
 export const markAllNotificationsRead = () => request('/notifications/read-all', { method: 'POST' });
+
+export const fetchAdminEmailLogs = () => request('/admin/email-logs');
+export const fetchAdminNotifications = () => request('/admin/notifications');
+export const fetchAdminExports = () => request('/admin/exports');
+export const testAdminTelegram = (payload: { chat_id?: string }) =>
+  request('/admin/test-telegram', { method: 'POST', body: JSON.stringify(payload) });
+export const testAdminSmtp = (payload: { to: string }) =>
+  request('/admin/test-smtp', { method: 'POST', body: JSON.stringify(payload) });

@@ -11,8 +11,11 @@ use crate::{
     repositories::users::ensure_seed_user,
     routes::{
         admin::{
-            billing as admin_billing, jobs as admin_jobs, overview as admin_overview,
-            sources as admin_sources, system as admin_system, users as admin_users,
+            billing as admin_billing, email_logs_list as admin_email_logs,
+            exports_list as admin_exports, jobs as admin_jobs,
+            notifications_snapshot as admin_notifications, overview as admin_overview,
+            sources as admin_sources, system as admin_system, test_smtp as admin_test_smtp,
+            test_telegram as admin_test_telegram, users as admin_users,
         },
         alerts::{create_alert, delete_alert, list_alerts, update_alert},
         auth::{
@@ -191,6 +194,11 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
                 "/api/v1/admin/system",
                 get(|auth: AuthBearer, state| async move { admin_system(auth, state).await }),
             )
+            .route("/api/v1/admin/email-logs", get(|auth: AuthBearer, state| async move { admin_email_logs(auth, state).await }))
+            .route("/api/v1/admin/notifications", get(|auth: AuthBearer, state| async move { admin_notifications(auth, state).await }))
+            .route("/api/v1/admin/exports", get(|auth: AuthBearer, state| async move { admin_exports(auth, state).await }))
+            .route("/api/v1/admin/test-telegram", post(|auth: AuthBearer, state, payload| async move { admin_test_telegram(auth, state, payload).await }))
+            .route("/api/v1/admin/test-smtp", post(|auth: AuthBearer, state, payload| async move { admin_test_smtp(auth, state, payload).await }))
             .route(
                 "/api/v1/admin/billing",
                 get(|auth: AuthBearer, state| async move { admin_billing(auth, state).await }),

@@ -134,3 +134,18 @@ TELEGRAM_DEFAULT_CHAT_ID=...
 Créer une alerte Studio avec le canal `telegram`.
 
 Discord et Slack ne sont pas inclus dans le scope go-live.
+
+## Diagnostic CI GitHub Actions
+
+Le repo contient deux workflows : `CI` et `CI Ping`.
+Si aucun workflow ne se lance après un push, vérifier Actions settings/global et relancer via `workflow_dispatch`.
+
+## Go-live : tests d’exploitation
+1. Lancer `CI Ping` puis vérifier `CI`.
+2. Déployer et configurer `.env.production`.
+3. Exécuter `./scripts/preflight-prod.sh`.
+4. Vérifier `/api/v1/health` et `/api/v1/ready`.
+5. Tester SMTP/Telegram depuis `/admin/ops`.
+6. Vérifier alerte web + notification in-app.
+7. Générer et télécharger un rapport CSV.
+8. Tester Stripe CLI.
