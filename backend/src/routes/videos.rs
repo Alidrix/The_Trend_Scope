@@ -50,7 +50,13 @@ pub async fn refresh_videos(
         };
 
         let (video_id, _) = upsert_video(&state.pool, &candidate).await?;
-        insert_video_stat(&state.pool, video_id, &candidate.platform, candidate.views_per_hour).await?;
+        insert_video_stat(
+            &state.pool,
+            video_id,
+            &candidate.platform,
+            candidate.views_per_hour,
+        )
+        .await?;
     }
 
     Ok(Json(ApiMessage {
