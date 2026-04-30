@@ -165,6 +165,7 @@ pub async fn register(
     let body = email::render_template("verify-email", Some(&verify_url));
     email::send_email(
         &state.pool,
+        &state.config.smtp,
         Some(user_id),
         &payload.username,
         "Verify your email",
@@ -242,6 +243,7 @@ pub async fn forgot_password(
         let body = email::render_template("reset-password", Some(&reset_url));
         email::send_email(
             &state.pool,
+            &state.config.smtp,
             Some(user_id),
             &username,
             "Reset password",
@@ -277,6 +279,7 @@ pub async fn resend_verification(
         let body = email::render_template("verify-email", Some(&verify_url));
         email::send_email(
             &state.pool,
+            &state.config.smtp,
             Some(user_id),
             &payload.email,
             "Verify your email",

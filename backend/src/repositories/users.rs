@@ -58,3 +58,20 @@ pub async fn update_user_plan(
         .await?;
     Ok(())
 }
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct UserAccessRow {
+    pub id: uuid::Uuid,
+    pub role: String,
+}
+
+pub async fn find_access_by_username(
+    pool: &PgPool,
+    username: &str,
+) -> Result<Option<UserAccessRow>, AppError> {
+    sqlx::query_as::<_, UserAccessRow>("SELECT id, role FROM users WHERE username = $1")
+        .bind(username)
+        .fetch_optional(pool)
+        .await
+        .map_err(AppError::from)
+}
