@@ -43,13 +43,15 @@ async fn audit_admin_action(
 ) {
     if let Err(err) = admin_audit_logs::create(
         &state.pool,
-        admin_username,
-        action,
-        target,
-        status,
-        None,
-        None,
-        metadata,
+        admin_audit_logs::CreateAdminAuditLog {
+            admin_username,
+            action,
+            target,
+            status,
+            ip_address: None,
+            user_agent: None,
+            metadata,
+        },
     )
     .await
     {

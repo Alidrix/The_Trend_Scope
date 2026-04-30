@@ -15,16 +15,17 @@ pub struct AdminAuditLogRow {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-pub async fn create(
-    pool: &PgPool,
-    admin_username: &str,
-    action: &str,
-    target: Option<&str>,
-    status: &str,
-    ip_address: Option<&str>,
-    user_agent: Option<&str>,
-    metadata: Value,
-) -> Result<(), AppError> {
+pub struct CreateAdminAuditLog<'a> {
+    pub admin_username: &'a str,
+    pub action: &'a str,
+    pub target: Option<&'a str>,
+    pub status: &'a str,
+    pub ip_address: Option<&'a str>,
+    pub user_agent: Option<&'a str>,
+    pub metadata: Value,
+}
+
+pub async fn create(pool: &PgPool, input: CreateAdminAuditLog<'_>) -> Result<(), AppError> {
     sqlx::query(
         r#"
         INSERT INTO admin_audit_logs
@@ -32,13 +33,13 @@ pub async fn create(
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
     )
-    .bind(admin_username)
-    .bind(action)
-    .bind(target)
-    .bind(status)
-    .bind(ip_address)
-    .bind(user_agent)
-    .bind(metadata)
+    .bind(input.admin_username)
+    .bind(input.action)
+    .bind(input.target)
+    .bind(input.status)
+    .bind(input.ip_address)
+    .bind(input.user_agent)
+    .bind(input.metadata)
     .execute(pool)
     .await?;
 
