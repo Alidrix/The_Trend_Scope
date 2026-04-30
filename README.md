@@ -737,3 +737,14 @@ Si aucun workflow ne se lance après un push :
 12. Créer un rapport CSV.
 13. Télécharger le CSV.
 14. Tester Stripe CLI.
+
+
+### Admin go-live cockpit
+
+Le cockpit admin expose :
+
+- `/admin` : vue globale SaaS
+- `/admin/ops` : tests SMTP, Telegram, YouTube et Stripe
+- `/admin/system` : état runtime, services et intégrations
+- `/admin/billing` : abonnements et MRR estimé
+- `/admin/go-live` : checklist finale avant VPS

@@ -19,7 +19,9 @@
     <a href={link[1]}>{link[0]}</a>
   {/each}
   {#if isAdmin}
-    <a href="/admin">Admin</a>
+    {#each [['Admin Overview','/admin'],['Admin Ops','/admin/ops'],['Admin System','/admin/system'],['Admin Billing','/admin/billing'],['Go-live Checklist','/admin/go-live']] as link}
+      <a href={link[1]}>{link[0]}</a>
+    {/each}
   {/if}
 </aside>
 

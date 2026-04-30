@@ -1,16 +1,2 @@
-<script lang="ts">
-  import { onMount } from 'svelte';
-  import { fetchAdminEmailLogs, fetchAdminNotifications, fetchAdminExports, fetchAdminSystem, testAdminSmtp, testAdminTelegram } from '$lib/api';
-  let system:any={}, logs:any[]=[], notifications:any, exports:any[]=[];
-  let smtpTo='admin@example.com'; let chatId='';
-  async function load(){ system=await fetchAdminSystem(); logs=(await fetchAdminEmailLogs()).logs ?? []; notifications=await fetchAdminNotifications(); exports=(await fetchAdminExports()).exports ?? []; }
-  onMount(load);
-</script>
-<h1>Admin Ops</h1>
-<p>SMTP: {system.smtp_configured ? 'configured' : 'not configured'}</p>
-<button on:click={async()=>{await testAdminSmtp({to:smtpTo}); await load();}}>Test SMTP</button>
-<p>Telegram: {system.telegram_configured ? 'configured' : 'not configured'}</p>
-<button on:click={async()=>{await testAdminTelegram({chat_id:chatId || undefined});}}>Test Telegram</button>
-<h2>Email logs</h2>{#each logs as l}<div>{l.recipient} - {l.status}</div>{/each}
-<h2>Notifications</h2><div>Total: {notifications?.total} / Unread: {notifications?.unread}</div>
-<h2>Exports</h2>{#each exports as e}<div>{e.title} - {e.file_url}</div>{/each}
+<script lang='ts'>import {onMount} from 'svelte';import AppShell from '$lib/components/AppShell.svelte';import {currentUser} from '$lib/stores/user';import {fetchAdminSystem,fetchAdminEmailLogs,fetchAdminNotifications,fetchAdminExports,testAdminSmtp,testAdminTelegram,testAdminYoutube,testAdminStripe} from '$lib/api';import StatusBadge from '$lib/components/StatusBadge.svelte';let system:any={};let logs:any[]=[];let notifs:any={};let exportsData:any[]=[];let smtpTo='';let chatId='';let results:Record<string,string>={};const load=async()=>{system=await fetchAdminSystem();logs=(await fetchAdminEmailLogs()).logs||[];notifs=await fetchAdminNotifications();exportsData=(await fetchAdminExports()).exports||[]};const run=async(k:string)=>{try{if(k==='smtp')results[k]=JSON.stringify(await testAdminSmtp({to:smtpTo}));if(k==='telegram')results[k]=JSON.stringify(await testAdminTelegram({chat_id:chatId||undefined}));if(k==='youtube')results[k]=JSON.stringify(await testAdminYoutube());if(k==='stripe')results[k]=JSON.stringify(await testAdminStripe());}catch(e:any){results[k]=e.message||'error'}};onMount(load);</script>
+<AppShell>{#if $currentUser?.role!=='admin'}<p>Accès restreint</p>{:else}<button on:click={load}>Refresh</button><p>SMTP <StatusBadge status={system?.integrations?.smtp||'not_configured'}/><input bind:value={smtpTo} placeholder="Email"/><button on:click={()=>run('smtp')}>test</button> {results.smtp}</p><p>Telegram <StatusBadge status={system?.integrations?.telegram||'not_configured'}/><input bind:value={chatId} placeholder="Chat ID"/><button on:click={()=>run('telegram')}>test</button> {results.telegram}</p><p>YouTube <StatusBadge status={system?.integrations?.youtube||'not_configured'}/><button on:click={()=>run('youtube')}>test</button> {results.youtube}</p><p>Stripe <StatusBadge status={system?.integrations?.stripe||'not_configured'}/><button on:click={()=>run('stripe')}>test</button> {results.stripe}</p>{#each logs as l}<p>{l.recipient} {l.subject} {l.status}</p>{/each}{#each exportsData as e}<p>{e.title} {e.format} {#if e.file_url}<a href={e.file_url}>file</a>{/if}</p>{/each}{/if}</AppShell>
