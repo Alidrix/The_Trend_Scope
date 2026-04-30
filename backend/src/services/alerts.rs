@@ -112,7 +112,7 @@ pub async fn process_alert_rules_for_recent_trends(
                 continue;
             }
 
-            let mut status = "logged";
+            let status: &str;
             let mut payload = serde_json::json!({"channel":r.channel,"title":title,"platform":platform,"views_per_hour":vph});
             match r.channel.as_str() {
                 "web" => { status = "logged"; let _ = notifications::create(pool, r.user_id, "Nouvelle tendance détectée", &format!("{} accélère sur {}", title, platform), "trend_alert", serde_json::json!({"trend_id": trend_id,"platform": platform,"views_per_hour": vph,"url": url})).await?; },

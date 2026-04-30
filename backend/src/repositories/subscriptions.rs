@@ -76,3 +76,15 @@ pub async fn find_user_by_customer_id(
         .await
         .map_err(AppError::from)
 }
+
+pub async fn admin_billing_snapshot(pool: &PgPool) -> Result<serde_json::Value, AppError> {
+    let (total, active, inactive, pro, studio): (i64, i64, i64, i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*), COUNT(*) FILTER (WHERE status='active'), COUNT(*) FILTER (WHERE status<>'active'), COUNT(*) FILTER (WHERE plan='pro'), COUNT(*) FILTER (WHERE plan='studio') FROM subscriptions",
+    )
+    .fetch_one(pool)
+    .await?;
+    let estimate_cents = pro * 1000 + studio * 1800;
+    Ok(
+        serde_json::json!({"subscriptions":{"total":total,"active":active,"inactive":inactive,"pro":pro,"studio":studio},"mrr":{"currency":"EUR","estimate_cents":estimate_cents,"pro_unit_cents":1000,"studio_unit_cents":1800}}),
+    )
+}

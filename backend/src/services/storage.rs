@@ -5,7 +5,7 @@ use tokio::fs;
 use crate::{config::StorageConfig, error::AppError};
 
 pub fn sanitize_export_filename(filename: &str) -> Option<String> {
-    if filename.contains("..") || filename.contains('/') || filename.contains('\') {
+    if filename.contains("..") || filename.contains('/') || filename.contains('\\') {
         return None;
     }
 

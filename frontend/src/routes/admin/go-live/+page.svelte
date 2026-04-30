@@ -1,0 +1,2 @@
+<script lang="ts">import {onMount} from 'svelte';import {fetchAdminGoLiveChecklist} from '$lib/api';import GoLiveChecklist from '$lib/components/GoLiveChecklist.svelte'; let data:any={items:[]}; let error=''; const load=async()=>{try{data=await fetchAdminGoLiveChecklist();}catch(e){error=(e as Error).message}}; onMount(load);</script>
+<h1>Go-live checklist</h1><button on:click={load}>Refresh</button>{#if error}<p>{error}</p>{/if}<GoLiveChecklist items={data.items||[]}/>

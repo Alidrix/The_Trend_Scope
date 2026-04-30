@@ -83,9 +83,8 @@ pub async fn send_email(
     };
     let mailer = builder.port(smtp.port).credentials(creds).build();
     match mailer.send(msg).await {
-        Ok(r) => {
-            let mid = format!("{:?}", r.message_id());
-            email_logs::log(pool, user_id, to, subject, "sent", Some(&mid), None).await?;
+        Ok(_) => {
+            email_logs::log(pool, user_id, to, subject, "sent", None, None).await?;
             Ok(())
         }
         Err(e) => {

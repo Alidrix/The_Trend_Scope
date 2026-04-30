@@ -1,22 +1,21 @@
+use crate::{
+    error::AppError,
+    repositories::{admin, email_logs, notifications, reports, subscriptions},
+    services::{
+        access::ensure_admin,
+        email, stripe,
+        telegram::{send_telegram_alert, TelegramAlertMessage},
+        youtube,
+    },
+    state::AppState,
+    AuthBearer,
+};
 use axum::{
     extract::{Query, State},
     Json,
 };
 use serde::Deserialize;
 use serde_json::json;
-
-use crate::{
-    error::AppError,
-    repositories::{admin, alerts, email_logs, notifications, reports},
-    services::{
-        access::ensure_admin,
-        email,
-        telegram::{send_telegram_alert, TelegramAlertMessage},
-    },
-    state::AppState,
-    AuthBearer,
-};
-
 #[derive(Debug, Deserialize)]
 pub struct AdminUsersQuery {
     pub page: Option<i64>,
@@ -33,16 +32,14 @@ pub struct TestTelegramPayload {
 pub struct TestSmtpPayload {
     pub to: String,
 }
-// keep existing funcs abbreviated
 pub async fn overview(
     auth: AuthBearer,
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    let total_users: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
-        .fetch_one(&state.pool)
-        .await?;
-    Ok(Json(json!({"users":{"total":total_users}})))
+    Ok(Json(
+        admin::overview_snapshot(&state.pool, &state.config).await?,
+    ))
 }
 pub async fn users(
     auth: AuthBearer,
@@ -58,7 +55,7 @@ pub async fn users(
         search: q.search,
     };
     Ok(Json(
-        json!({"users": admin::list_users(&state.pool,&filters).await?}),
+        json!({"users":admin::list_users(&state.pool,&filters).await?}),
     ))
 }
 pub async fn sources(
@@ -80,8 +77,32 @@ pub async fn system(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
+    let pg = sqlx::query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(&state.pool)
+        .await
+        .is_ok();
+    let redis = state.redis.get_connection().is_ok();
+    let nats = true;
+    let ch = if state.config.clickhouse.url.is_empty() {
+        "not_configured"
+    } else {
+        "configured"
+    };
+    let s3 = if [
+        state.config.storage.s3_endpoint.as_str(),
+        state.config.storage.s3_bucket.as_str(),
+        state.config.storage.s3_access_key_id.as_str(),
+        state.config.storage.s3_secret_access_key.as_str(),
+    ]
+    .iter()
+    .all(|v| !v.is_empty())
+    {
+        "configured"
+    } else {
+        "not_configured"
+    };
     Ok(Json(
-        json!({"smtp_configured":state.config.smtp.is_configured(),"telegram_configured":state.config.telegram.is_configured()}),
+        json!({"runtime":{"env":state.config.env,"frontend_origin":state.config.frontend_origin},"services":{"postgres":if pg{"ok"}else{"error"},"redis":if redis{"ok"}else{"error"},"nats":if nats{"ok"}else{"error"},"clickhouse":ch},"integrations":{"youtube":if state.config.youtube.api_key.is_empty(){"not_configured"}else{"configured"},"stripe":if stripe::config_from_env().is_some(){"configured"}else{"not_configured"},"smtp":if state.config.smtp.is_configured(){"configured"}else{"not_configured"},"telegram":if state.config.telegram.is_configured(){"configured"}else{"not_configured"},"cloudflare":if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"not_configured"}else{"configured"}},"storage":{"local_exports_dir":state.config.storage.local_exports_dir,"s3":s3}}),
     ))
 }
 pub async fn billing(
@@ -89,9 +110,20 @@ pub async fn billing(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    Ok(Json(json!({"ok":true})))
+    let mut snap = subscriptions::admin_billing_snapshot(&state.pool).await?;
+    snap["stripe"] = json!({"configured":stripe::config_from_env().is_some(),"webhook_configured":!std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default().is_empty(),"price_pro_configured":!std::env::var("STRIPE_PRICE_PRO_MONTHLY").unwrap_or_default().is_empty(),"price_studio_configured":!std::env::var("STRIPE_PRICE_STUDIO_MONTHLY").unwrap_or_default().is_empty()});
+    Ok(Json(snap))
 }
-
+pub async fn go_live_checklist(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
+    Ok(Json(
+        json!({"items":[{"key":"youtube","label":"YouTube API key configured","status": if state.config.youtube.api_key.is_empty(){"error"}else{"ok"},"blocking":true},{"key":"stripe","label":"Stripe configured","status": if stripe::config_from_env().is_some(){"ok"}else{"warning"},"blocking":true},{"key":"smtp","label":"SMTP configured","status": if state.config.smtp.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"telegram","label":"Telegram configured","status": if state.config.telegram.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"cloudflare","label":"Cloudflare token configured","status": if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"error"}else{"ok"},"blocking":true},{"key":"traefik_dynamic","label":"Traefik dynamic.yml configured","status":"manual","blocking":true},{"key":"database","label":"Database via PgBouncer","status":"ok","blocking":true},{"key":"redis","label":"Redis configured","status":"ok","blocking":true},{"key":"nats","label":"NATS configured","status":"ok","blocking":true},{"key":"exports","label":"Local exports directory configured","status":"ok","blocking":false}] }),
+    ))
+}
+// existing misc
 pub async fn email_logs_list(
     auth: AuthBearer,
     State(state): State<AppState>,
@@ -113,7 +145,7 @@ pub async fn exports_list(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    let exports = reports::latest_exports(&state.pool).await?.into_iter().map(|r| json!({"id":r.id,"title":r.title,"format":r.format,"file_url":r.file_url,"created_at":r.created_at})).collect::<Vec<_>>();
+    let exports=reports::latest_exports(&state.pool).await?.into_iter().map(|r|json!({"id":r.id,"title":r.title,"format":r.format,"file_url":r.file_url,"created_at":r.created_at})).collect::<Vec<_>>();
     Ok(Json(json!({"exports":exports})))
 }
 pub async fn test_telegram(
@@ -124,7 +156,7 @@ pub async fn test_telegram(
     ensure_admin(&state.pool, &auth.sub).await?;
     if !state.config.telegram.is_configured() {
         return Ok(Json(json!({"sent":false,"reason":"not_configured"})));
-    }
+    };
     let chat_id = payload.chat_id.or_else(|| {
         state
             .config
@@ -159,7 +191,7 @@ pub async fn test_smtp(
     ensure_admin(&state.pool, &auth.sub).await?;
     if !state.config.smtp.is_configured() {
         return Ok(Json(json!({"sent":false,"reason":"not_configured"})));
-    }
+    };
     email::send_email(
         &state.pool,
         &state.config.smtp,
@@ -170,4 +202,41 @@ pub async fn test_smtp(
     )
     .await?;
     Ok(Json(json!({"sent":true})))
+}
+pub async fn test_youtube(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
+    if state.config.youtube.api_key.is_empty() {
+        return Ok(Json(
+            json!({"ok":false,"reason":"not_configured","message":"YouTube API key is not configured"}),
+        ));
+    };
+    match youtube::validate_api_key(&state.http, &state.config.youtube).await {
+        Ok(_) => Ok(Json(
+            json!({"ok":true,"message":"YouTube API key accepted"}),
+        )),
+        Err(_) => Ok(Json(
+            json!({"ok":false,"reason":"youtube_api_error","message":"youtube api validation failed"}),
+        )),
+    }
+}
+pub async fn test_stripe(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
+    let configured = json!({"secret_key":!std::env::var("STRIPE_SECRET_KEY").unwrap_or_default().is_empty(),"webhook_secret":!std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default().is_empty(),"pro_price":!std::env::var("STRIPE_PRICE_PRO_MONTHLY").unwrap_or_default().is_empty(),"studio_price":!std::env::var("STRIPE_PRICE_STUDIO_MONTHLY").unwrap_or_default().is_empty()});
+    let ok = configured["secret_key"].as_bool() == Some(true)
+        && configured["webhook_secret"].as_bool() == Some(true)
+        && configured["pro_price"].as_bool() == Some(true)
+        && configured["studio_price"].as_bool() == Some(true);
+    if ok {
+        Ok(Json(json!({"ok":true,"configured":configured})))
+    } else {
+        Ok(Json(
+            json!({"ok":false,"configured":configured,"reason":"missing_required_stripe_config"}),
+        ))
+    }
 }

@@ -1,3 +1,4 @@
+use crate::config::YoutubeConfig;
 use crate::{error::AppError, models::video::NewVideo};
 use chrono::{DateTime, Utc};
 use reqwest::Client;
@@ -203,6 +204,30 @@ fn parse_iso8601_duration_seconds(duration: &str) -> i32 {
     }
 
     hours * 3600 + minutes * 60 + seconds
+}
+
+pub async fn validate_api_key(client: &Client, config: &YoutubeConfig) -> Result<(), AppError> {
+    if config.api_key.is_empty() {
+        return Err(AppError::BadRequest(
+            "YouTube API key is not configured".into(),
+        ));
+    }
+    let res = client
+        .get("https://www.googleapis.com/youtube/v3/videos")
+        .query(&[
+            ("part", "id"),
+            ("chart", "mostPopular"),
+            ("maxResults", "1"),
+            ("regionCode", "FR"),
+            ("key", &config.api_key),
+        ])
+        .send()
+        .await?;
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest("youtube api validation failed".into()))
+    }
 }
 
 #[cfg(test)]

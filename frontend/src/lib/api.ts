@@ -110,3 +110,7 @@ export const testAdminTelegram = (payload: { chat_id?: string }) =>
   request('/admin/test-telegram', { method: 'POST', body: JSON.stringify(payload) });
 export const testAdminSmtp = (payload: { to: string }) =>
   request('/admin/test-smtp', { method: 'POST', body: JSON.stringify(payload) });
+
+export const fetchAdminGoLiveChecklist = () => request('/admin/go-live-checklist');
+export const testAdminYoutube = () => request('/admin/test-youtube', { method: 'POST' });
+export const testAdminStripe = () => request('/admin/test-stripe', { method: 'POST' });

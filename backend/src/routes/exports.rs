@@ -18,7 +18,7 @@ pub async fn download_export(
 ) -> Result<impl IntoResponse, AppError> {
     let safe = sanitize_export_filename(&filename)
         .ok_or_else(|| AppError::BadRequest("invalid filename".into()))?;
-    let user = users::find_one_by_username(&state.pool, &auth.sub)
+    let user = users::find_access_by_username(&state.pool, &auth.sub)
         .await?
         .ok_or(AppError::Unauthorized)?;
     let can =
@@ -27,6 +27,8 @@ pub async fn download_export(
         return Err(AppError::Forbidden);
     }
     let p = std::path::Path::new(&state.config.storage.local_exports_dir).join(&safe);
-    let bytes = fs::read(p).await.map_err(|_| AppError::NotFound)?;
+    let bytes = fs::read(p)
+        .await
+        .map_err(|_| AppError::BadRequest("export file not found".into()))?;
     Ok(([("content-type", "text/csv")], bytes))
 }
