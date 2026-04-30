@@ -767,3 +767,20 @@ Avant ouverture publique, valider :
 12. `/admin/billing`.
 13. `/admin/go-live`.
 14. `/metrics`.
+
+## Validation préproduction
+
+La CI est le premier filtre obligatoire.
+
+Avant déploiement VPS :
+1. Vérifier que le workflow `CI` est vert.
+2. Préparer `.env.production`.
+3. Lancer `SKIP_REMOTE_CHECKS=1 ./scripts/go-live-check.sh`.
+4. Déployer avec `./scripts/prod-up.sh`.
+5. Lancer `./scripts/prod-check.sh`.
+6. Lancer `./scripts/go-live-check.sh`.
+7. Ouvrir `/admin/system`.
+8. Ouvrir `/admin/ops`.
+9. Lancer le smoke interne.
+10. Tester YouTube, Stripe, SMTP et Telegram.
+11. Vérifier `/admin/go-live`.

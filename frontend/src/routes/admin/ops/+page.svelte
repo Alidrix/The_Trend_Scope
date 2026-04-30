@@ -6,14 +6,16 @@
   import AdminStatCard from '$lib/components/AdminStatCard.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
+  import { getErrorMessage } from '$lib/errors';
   import { currentUser } from '$lib/stores/user';
-  import * as adminApi from '$lib/api';
-  import {
+    import {
     fetchAdminEmailLogs,
     fetchAdminExports,
     fetchAdminNotifications,
     fetchAdminSmoke,
     fetchAdminSystem,
+    runAdminStripeCheck,
+    runAdminYoutubeCheck,
     testAdminSmtp,
     testAdminTelegram,
     type AdminEmailLog,
@@ -23,8 +25,6 @@
     type AdminSystem,
     type AdminTestResult
   } from '$lib/api';
-  const runAdminYoutubeCheck = adminApi['testAdmin' + 'Youtube'];
-  const runAdminStripeCheck = adminApi['testAdmin' + 'Stripe'];
 
   let system: AdminSystem | null = null;
   let logs: AdminEmailLog[] = [];
@@ -63,8 +63,8 @@
       logs = (await fetchAdminEmailLogs()).logs || [];
       notifs = await fetchAdminNotifications();
       exportsData = (await fetchAdminExports()).exports || [];
-    } catch (e: any) {
-      errorGlobal = e.message || 'Erreur';
+    } catch (error: unknown) {
+      errorGlobal = getErrorMessage(error, 'Erreur');
     } finally {
       loadingGlobal = false;
     }
@@ -90,8 +90,8 @@
       else response = await runAdminStripeCheck();
 
       record(key, Boolean(response.ok ?? response.sent), response.message ?? response.reason ?? 'ok');
-    } catch (e: any) {
-      record(key, false, e.message || 'error');
+    } catch (error: unknown) {
+      record(key, false, getErrorMessage(error, 'error'));
     } finally {
       loading[key] = false;
     }

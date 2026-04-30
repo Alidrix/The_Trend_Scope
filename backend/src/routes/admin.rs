@@ -85,21 +85,9 @@ pub async fn system(
     } else {
         "configured"
     };
-    let s3 = if [
-        state.config.storage.s3_endpoint.as_str(),
-        state.config.storage.s3_bucket.as_str(),
-        state.config.storage.s3_access_key_id.as_str(),
-        state.config.storage.s3_secret_access_key.as_str(),
-    ]
-    .iter()
-    .all(|v| !v.is_empty())
-    {
-        "configured"
-    } else {
-        "not_configured"
-    };
+    let s3 = s3_status(&state);
     Ok(Json(
-        json!({"runtime":{"env":state.config.env,"frontend_origin":state.config.frontend_origin},"services":{"postgres":pg,"redis":redis,"nats":nats,"clickhouse":ch},"integrations":{"youtube":if state.config.youtube.api_key.is_empty(){"not_configured"}else{"configured"},"stripe":if stripe::config_from_env().is_some(){"configured"}else{"not_configured"},"smtp":if state.config.smtp.is_configured(){"configured"}else{"not_configured"},"telegram":if state.config.telegram.is_configured(){"configured"}else{"not_configured"},"cloudflare":if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"not_configured"}else{"configured"}},"storage":{"local_exports_dir":state.config.storage.local_exports_dir,"s3":s3}}),
+        json!({"runtime":{"env":state.config.env,"frontend_origin":state.config.frontend_origin},"services":{"postgres":pg,"redis":redis,"nats":nats,"clickhouse":ch},"integrations":integration_statuses(&state),"storage":{"local_exports_dir":state.config.storage.local_exports_dir,"s3":s3}}),
     ))
 }
 pub async fn billing(
@@ -108,7 +96,7 @@ pub async fn billing(
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
     let mut snap = subscriptions::admin_billing_snapshot(&state.pool).await?;
-    snap["stripe"] = json!({"configured":stripe::config_from_env().is_some(),"webhook_configured":!std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default().is_empty(),"price_pro_configured":!std::env::var("STRIPE_PRICE_PRO_MONTHLY").unwrap_or_default().is_empty(),"price_studio_configured":!std::env::var("STRIPE_PRICE_STUDIO_MONTHLY").unwrap_or_default().is_empty()});
+    snap["stripe"] = stripe_flags();
     Ok(Json(snap))
 }
 pub async fn go_live_checklist(
@@ -165,6 +153,44 @@ fn nats_status(state: &AppState) -> &'static str {
     }
 }
 
+fn s3_status(state: &AppState) -> &'static str {
+    if [
+        state.config.storage.s3_endpoint.as_str(),
+        state.config.storage.s3_bucket.as_str(),
+        state.config.storage.s3_access_key_id.as_str(),
+        state.config.storage.s3_secret_access_key.as_str(),
+    ]
+    .iter()
+    .all(|v| !v.is_empty())
+    {
+        "configured"
+    } else {
+        "not_configured"
+    }
+}
+
+fn integration_statuses(state: &AppState) -> serde_json::Value {
+    json!({
+        "youtube": if state.config.youtube.api_key.is_empty() { "not_configured" } else { "configured" },
+        "stripe": if stripe::config_from_env().is_some() { "configured" } else { "not_configured" },
+        "smtp": if state.config.smtp.is_configured() { "configured" } else { "not_configured" },
+        "telegram": if state.config.telegram.is_configured() { "configured" } else { "not_configured" },
+        "cloudflare": if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty() {
+            "not_configured"
+        } else {
+            "configured"
+        }
+    })
+}
+
+fn stripe_flags() -> serde_json::Value {
+    json!({
+        "configured": stripe::config_from_env().is_some(),
+        "webhook_configured": !std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default().is_empty(),
+        "price_pro_configured": !std::env::var("STRIPE_PRICE_PRO_MONTHLY").unwrap_or_default().is_empty(),
+        "price_studio_configured": !std::env::var("STRIPE_PRICE_STUDIO_MONTHLY").unwrap_or_default().is_empty()
+    })
+}
 // existing misc
 pub async fn email_logs_list(
     auth: AuthBearer,

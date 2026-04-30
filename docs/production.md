@@ -215,3 +215,15 @@ Ouvrir :
 - /admin/billing
 - /admin/go-live
 - /metrics
+
+## Vérification admin smoke avec token
+
+`go-live-check.sh` peut vérifier l’endpoint admin smoke si un token admin est fourni :
+
+```bash
+ADMIN_BEARER_TOKEN="..." ./scripts/go-live-check.sh
+```
+
+Le token n’est jamais affiché dans les logs.
+
+Sans token, le check admin est ignoré.

@@ -76,5 +76,14 @@ fi
 check_url "Health" "https://${API_DOMAIN}/api/v1/health"
 check_url "Ready" "https://${API_DOMAIN}/api/v1/ready"
 check_url "Metrics" "https://${API_DOMAIN}/metrics"
+if [ -n "${ADMIN_BEARER_TOKEN:-}" ]; then
+  info "Checking Admin smoke endpoint"
+  curl -fsS \
+    -H "Authorization: Bearer ${ADMIN_BEARER_TOKEN}" \
+    "https://${API_DOMAIN}/api/v1/admin/smoke" >/dev/null
+  success "Admin smoke reachable"
+else
+  info "ADMIN_BEARER_TOKEN not provided; admin smoke check skipped"
+fi
 
 success "Go-live check completed"

@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { token } from "./stores/auth";
 
+// Core request
 export const API_BASE =
   import.meta.env.VITE_API_BASE || "http://localhost:4443/api/v1";
 export function buildApiUrl(path: string) {
@@ -20,6 +21,8 @@ async function request(path: string, options: RequestInit = {}) {
   }
   return response.json();
 }
+
+// Auth
 export const login = (username: string, password: string) =>
   request("/auth/login", {
     method: "POST",
@@ -175,6 +178,8 @@ export const verifyEmail = (tokenValue: string) =>
     method: "POST",
     body: JSON.stringify({ token: tokenValue }),
   });
+
+// Admin types
 export type AdminOverview = {
   users: { total: number; verified: number; admins: number };
   plans: { free: number; pro: number; studio: number };
@@ -267,6 +272,8 @@ export type AdminTestResult = {
   message?: string;
   configured?: Record<string, boolean>;
 };
+
+// Admin API
 export const fetchAdminOverview = () =>
   request("/admin/overview") as Promise<AdminOverview>;
 export const fetchAdminUsers = (
@@ -313,5 +320,7 @@ export const testAdminYoutube = () =>
   request("/admin/test-youtube", { method: "POST" }) as Promise<AdminTestResult>;
 export const testAdminStripe = () =>
   request("/admin/test-stripe", { method: "POST" }) as Promise<AdminTestResult>;
+export const runAdminYoutubeCheck = testAdminYoutube;
+export const runAdminStripeCheck = testAdminStripe;
 export const fetchAdminSmoke = () =>
   request("/admin/smoke") as Promise<AdminSmoke>;
