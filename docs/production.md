@@ -227,3 +227,21 @@ ADMIN_BEARER_TOKEN="..." ./scripts/go-live-check.sh
 Le token n’est jamais affiché dans les logs.
 
 Sans token, le check admin est ignoré.
+
+
+## Validation opérateur depuis le cockpit admin
+
+Après déploiement VPS :
+
+1. Ouvrir `/admin/system`.
+2. Vérifier PostgreSQL, Redis, NATS, ClickHouse.
+3. Ouvrir `/admin/ops`.
+4. Lancer le smoke interne.
+5. Tester YouTube.
+6. Tester Stripe.
+7. Tester SMTP.
+8. Tester Telegram.
+9. Vérifier les logs email.
+10. Vérifier les exports.
+11. Ouvrir `/admin/go-live`.
+12. Corriger tous les items bloquants.

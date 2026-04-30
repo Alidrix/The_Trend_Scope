@@ -259,6 +259,25 @@ export type AdminNotificationSnapshot = {
     created_at?: string;
   }>;
 };
+export type AdminUserRow = {
+  id: string;
+  username: string;
+  role: string;
+  plan?: string;
+  created_at?: string;
+};
+export type AdminUsersResponse = {
+  users: AdminUserRow[];
+};
+export type AdminSourceStatus = {
+  sources: Record<string, string>;
+};
+export type AdminJobsSnapshot = {
+  pending_reports?: number;
+  completed_reports_24h?: number;
+  failed_reports_24h?: number;
+};
+
 export type AdminEmailLogsResponse = {
   logs: AdminEmailLog[];
 };
@@ -278,15 +297,17 @@ export const fetchAdminOverview = () =>
   request("/admin/overview") as Promise<AdminOverview>;
 export const fetchAdminUsers = (
   params: Record<string, string | number> = {},
-) => {
+): Promise<AdminUsersResponse> => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => query.set(k, String(v)));
   return request(
     `/admin/users${query.toString() ? `?${query.toString()}` : ""}`,
-  );
+  ) as Promise<AdminUsersResponse>;
 };
-export const fetchAdminSources = () => request("/admin/sources");
-export const fetchAdminJobs = () => request("/admin/jobs");
+export const fetchAdminSources = () =>
+  request("/admin/sources") as Promise<AdminSourceStatus>;
+export const fetchAdminJobs = () =>
+  request("/admin/jobs") as Promise<AdminJobsSnapshot>;
 export const fetchAdminSystem = () =>
   request("/admin/system") as Promise<AdminSystem>;
 export const fetchAdminBilling = () =>
