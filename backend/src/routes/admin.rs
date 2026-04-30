@@ -272,15 +272,55 @@ pub async fn smoke(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    Ok(Json(json!({"ok":true,"checks":{
-        "postgres":postgres_status(&state).await,
-        "redis":redis_status(&state).await,
-        "nats":nats_status(&state),
-        "metrics":"ok",
-        "youtube_config":if state.config.youtube.api_key.is_empty(){"not_configured"}else{"configured"},
-        "stripe_config":if stripe::config_from_env().is_some(){"configured"}else{"not_configured"},
-        "smtp_config":if state.config.smtp.is_configured(){"configured"}else{"not_configured"},
-        "telegram_config":if state.config.telegram.is_configured(){"configured"}else{"not_configured"},
-        "storage":"ok"
-    }})))
+    let storage = if state.config.storage.local_exports_dir.trim().is_empty() {
+        "not_configured"
+    } else if tokio::fs::create_dir_all(&state.config.storage.local_exports_dir)
+        .await
+        .is_ok()
+    {
+        "ok"
+    } else {
+        "error"
+    };
+
+    let checks = json!({
+        "postgres": postgres_status(&state).await,
+        "redis": redis_status(&state).await,
+        "nats": nats_status(&state),
+        "metrics": "ok",
+        "youtube_config": if state.config.youtube.api_key.is_empty() { "not_configured" } else { "configured" },
+        "stripe_config": if stripe::config_from_env().is_some() { "configured" } else { "not_configured" },
+        "smtp_config": if state.config.smtp.is_configured() { "configured" } else { "not_configured" },
+        "telegram_config": if state.config.telegram.is_configured() { "configured" } else { "not_configured" },
+        "storage": storage
+    });
+    let blocking = json!({
+        "postgres": true,
+        "redis": true,
+        "nats": true,
+        "youtube_config": true,
+        "stripe_config": true,
+        "storage": true,
+        "smtp_config": false,
+        "telegram_config": false,
+        "metrics": false
+    });
+
+    let mut ok = true;
+    let acceptable = ["ok", "configured"];
+    for key in [
+        "postgres",
+        "redis",
+        "nats",
+        "youtube_config",
+        "stripe_config",
+        "storage",
+    ] {
+        let status = checks.get(key).and_then(|v| v.as_str()).unwrap_or("error");
+        if !acceptable.contains(&status) {
+            ok = false;
+        }
+    }
+
+    Ok(Json(json!({"ok":ok,"checks":checks,"blocking":blocking})))
 }

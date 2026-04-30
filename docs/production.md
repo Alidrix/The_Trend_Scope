@@ -169,3 +169,41 @@ Après déploiement, ouvrir dans cet ordre :
 3. `/admin/billing`
 4. `/admin/go-live`
 5. `/metrics`
+
+## Validation finale préproduction
+
+### Étape 1 — validation locale
+
+```bash
+cp .env.example .env
+docker compose build --no-cache
+docker compose up -d postgres pgbouncer redis nats clickhouse
+docker compose up -d backend
+curl -fsS http://localhost:4443/api/v1/health
+curl -fsS http://localhost:4443/api/v1/ready
+curl -fsS http://localhost:4443/metrics
+docker compose up -d worker frontend
+docker compose down -v
+```
+
+### Étape 2 — validation VPS sans appels distants
+
+```bash
+SKIP_REMOTE_CHECKS=1 ./scripts/go-live-check.sh
+```
+
+### Étape 3 — validation VPS avec HTTPS
+
+```bash
+./scripts/go-live-check.sh
+```
+
+### Étape 4 — validation admin
+
+Ouvrir :
+
+- /admin/system
+- /admin/ops
+- /admin/billing
+- /admin/go-live
+- /metrics

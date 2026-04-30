@@ -197,6 +197,32 @@ jobs:
           bash -n scripts/prod-check.sh
           bash -n scripts/prod-logs.sh
 
+
+      - name: Final preprod completeness guards
+        run: |
+          grep -q "SKIP_REMOTE_CHECKS" scripts/go-live-check.sh
+          grep -q "require_env" scripts/go-live-check.sh
+          grep -q "check_url" scripts/go-live-check.sh
+          grep -q "Blocking items remaining" frontend/src/routes/admin/go-live/+page.svelte
+          grep -q "integrations.cloudflare" frontend/src/routes/admin/system/+page.svelte
+          grep -q "storage.local_exports_dir" frontend/src/routes/admin/system/+page.svelte
+          grep -q "subscriptions.pro" frontend/src/routes/admin/billing/+page.svelte
+          grep -q "stripe.webhook_configured" frontend/src/routes/admin/billing/+page.svelte
+          grep -q "plans.free" frontend/src/routes/admin/+page.svelte
+          grep -q "alerts.rules_enabled" frontend/src/routes/admin/+page.svelte
+          grep -q "emails.sent_24h" frontend/src/routes/admin/+page.svelte
+
+      - name: Admin ops button labels guard
+        run: |
+          if grep -q "testAdminYoutube" frontend/src/routes/admin/ops/+page.svelte; then
+            echo "User-facing admin ops button must not display testAdminYoutube"
+            exit 1
+          fi
+          if grep -q "testAdminStripe" frontend/src/routes/admin/ops/+page.svelte; then
+            echo "User-facing admin ops button must not display testAdminStripe"
+            exit 1
+          fi
+
       - name: Dump docker logs on failure
         if: failure()
         run: |

@@ -748,3 +748,22 @@ Le cockpit admin expose :
 - `/admin/system` : état runtime, services et intégrations
 - `/admin/billing` : abonnements et MRR estimé
 - `/admin/go-live` : checklist finale avant VPS
+
+## Préproduction VPS
+
+Avant ouverture publique, valider :
+
+1. CI verte.
+2. Docker smoke vert.
+3. `bash -n` sur tous les scripts.
+4. `.env.production` complet.
+5. `./scripts/preflight-prod.sh`.
+6. `SKIP_REMOTE_CHECKS=1 ./scripts/go-live-check.sh`.
+7. `./scripts/prod-up.sh`.
+8. `./scripts/prod-check.sh`.
+9. `./scripts/go-live-check.sh`.
+10. `/admin/system`.
+11. `/admin/ops`.
+12. `/admin/billing`.
+13. `/admin/go-live`.
+14. `/metrics`.
