@@ -77,12 +77,9 @@ pub async fn system(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    let pg = sqlx::query_scalar::<_, i32>("SELECT 1")
-        .fetch_one(&state.pool)
-        .await
-        .is_ok();
-    let redis = state.redis.get_connection().is_ok();
-    let nats = true;
+    let pg = postgres_status(&state).await;
+    let redis = redis_status(&state).await;
+    let nats = nats_status(&state);
     let ch = if state.config.clickhouse.url.is_empty() {
         "not_configured"
     } else {
@@ -102,7 +99,7 @@ pub async fn system(
         "not_configured"
     };
     Ok(Json(
-        json!({"runtime":{"env":state.config.env,"frontend_origin":state.config.frontend_origin},"services":{"postgres":if pg{"ok"}else{"error"},"redis":if redis{"ok"}else{"error"},"nats":if nats{"ok"}else{"error"},"clickhouse":ch},"integrations":{"youtube":if state.config.youtube.api_key.is_empty(){"not_configured"}else{"configured"},"stripe":if stripe::config_from_env().is_some(){"configured"}else{"not_configured"},"smtp":if state.config.smtp.is_configured(){"configured"}else{"not_configured"},"telegram":if state.config.telegram.is_configured(){"configured"}else{"not_configured"},"cloudflare":if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"not_configured"}else{"configured"}},"storage":{"local_exports_dir":state.config.storage.local_exports_dir,"s3":s3}}),
+        json!({"runtime":{"env":state.config.env,"frontend_origin":state.config.frontend_origin},"services":{"postgres":pg,"redis":redis,"nats":nats,"clickhouse":ch},"integrations":{"youtube":if state.config.youtube.api_key.is_empty(){"not_configured"}else{"configured"},"stripe":if stripe::config_from_env().is_some(){"configured"}else{"not_configured"},"smtp":if state.config.smtp.is_configured(){"configured"}else{"not_configured"},"telegram":if state.config.telegram.is_configured(){"configured"}else{"not_configured"},"cloudflare":if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"not_configured"}else{"configured"}},"storage":{"local_exports_dir":state.config.storage.local_exports_dir,"s3":s3}}),
     ))
 }
 pub async fn billing(
@@ -120,9 +117,38 @@ pub async fn go_live_checklist(
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
     Ok(Json(
-        json!({"items":[{"key":"youtube","label":"YouTube API key configured","status": if state.config.youtube.api_key.is_empty(){"error"}else{"ok"},"blocking":true},{"key":"stripe","label":"Stripe configured","status": if stripe::config_from_env().is_some(){"ok"}else{"warning"},"blocking":true},{"key":"smtp","label":"SMTP configured","status": if state.config.smtp.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"telegram","label":"Telegram configured","status": if state.config.telegram.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"cloudflare","label":"Cloudflare token configured","status": if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"error"}else{"ok"},"blocking":true},{"key":"traefik_dynamic","label":"Traefik dynamic.yml configured","status":"manual","blocking":true},{"key":"database","label":"Database via PgBouncer","status":"ok","blocking":true},{"key":"redis","label":"Redis configured","status":"ok","blocking":true},{"key":"nats","label":"NATS configured","status":"ok","blocking":true},{"key":"exports","label":"Local exports directory configured","status":"ok","blocking":false}] }),
+        json!({"items":[{"key":"youtube","label":"YouTube API key configured","status": if state.config.youtube.api_key.is_empty(){"error"}else{"ok"},"blocking":true},{"key":"stripe","label":"Stripe configured","status": if stripe::config_from_env().is_some(){"ok"}else{"warning"},"blocking":true},{"key":"smtp","label":"SMTP configured","status": if state.config.smtp.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"telegram","label":"Telegram configured","status": if state.config.telegram.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"cloudflare","label":"Cloudflare token configured","status": if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"error"}else{"ok"},"blocking":true},{"key":"traefik_dynamic","label":"Traefik dynamic.yml configured","status":"manual","blocking":true},{"key":"database","label":"Database via PgBouncer","status":postgres_status(&state).await,"blocking":true},{"key":"redis","label":"Redis configured","status":redis_status(&state).await,"blocking":true},{"key":"nats","label":"NATS configured","status":nats_status(&state),"blocking":true},{"key":"exports","label":"Local exports directory configured","status":"ok","blocking":false}] }),
     ))
 }
+
+async fn postgres_status(state: &AppState) -> &'static str {
+    if sqlx::query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(&state.pool)
+        .await
+        .is_ok()
+    {
+        "ok"
+    } else {
+        "error"
+    }
+}
+
+async fn redis_status(state: &AppState) -> &'static str {
+    if state.redis.get_connection().is_ok() {
+        "ok"
+    } else {
+        "error"
+    }
+}
+
+fn nats_status(state: &AppState) -> &'static str {
+    if state.config.nats.nats_url.trim().is_empty() {
+        "not_configured"
+    } else {
+        "configured"
+    }
+}
+
 // existing misc
 pub async fn email_logs_list(
     auth: AuthBearer,

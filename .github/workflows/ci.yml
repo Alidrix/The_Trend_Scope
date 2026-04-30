@@ -251,3 +251,20 @@ jobs:
         run: |
           grep -q "ARG VITE_API_BASE" frontend/Dockerfile
           grep -q "VITE_API_BASE: \${VITE_API_BASE}" docker-compose.prod.yml
+
+
+      - name: Admin contract guards
+        run: |
+          if grep -R "data.jobs.pending_reports" frontend/src/routes/admin; then echo "Frontend admin overview still reads old jobs.pending_reports contract"; exit 1; fi
+          if grep -R "mrr_cents_estimate" frontend/src/routes/admin; then echo "Frontend admin billing still reads old mrr_cents_estimate contract"; exit 1; fi
+          if grep -R "smtp_configured\|telegram_configured" frontend/src/routes/admin; then echo "Frontend admin ops still reads old smtp_configured/telegram_configured contract"; exit 1; fi
+          if grep -R "d.postgres\|d.redis\|d.nats\|d.clickhouse" frontend/src/routes/admin/system; then echo "Frontend admin system still reads old flat system contract"; exit 1; fi
+          if grep -R "FROM alerts WHERE enabled" backend/src; then echo "Backend must count enabled alert_rules, not alerts"; exit 1; fi
+      - name: Admin go-live UI guards
+        run: |
+          grep -q "testAdminYoutube" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "testAdminStripe" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "integrations" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "services" frontend/src/routes/admin/system/+page.svelte
+          grep -q "mrr.estimate_cents" frontend/src/routes/admin/billing/+page.svelte
+          grep -q "reports.pending" frontend/src/routes/admin/+page.svelte

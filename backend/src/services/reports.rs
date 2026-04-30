@@ -90,11 +90,11 @@ pub async fn process_pending_reports(
                 } else if format == "pdf" {
                     summary["file_generation"] = serde_json::json!("pdf_planned");
                 }
-                sqlx::query("UPDATE reports SET status='completed', summary=$2, file_url=$3, completed_at=NOW(), error_message=NULL WHERE id=$1").bind(id).bind(summary).bind(file_url).execute(pool).await?;
+                sqlx::query("UPDATE reports SET status='completed', summary=$2, file_url=$3, completed_at=NOW(), updated_at=NOW(), error_message=NULL WHERE id=$1").bind(id).bind(summary).bind(file_url).execute(pool).await?;
                 done += 1;
             }
             Err(e) => {
-                sqlx::query("UPDATE reports SET status='failed', error_message=$2 WHERE id=$1")
+                sqlx::query("UPDATE reports SET status='failed', error_message=$2, updated_at=NOW() WHERE id=$1")
                     .bind(id)
                     .bind(e.to_string())
                     .execute(pool)

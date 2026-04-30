@@ -87,7 +87,14 @@ export const verifyEmail = (tokenValue: string) => request('/auth/verify-email',
 export type Platform = 'youtube' | 'tiktok' | 'instagram';
 export type ReportFormat = 'json' | 'csv' | 'pdf';
 
-export const fetchAdminOverview = () => request('/admin/overview');
+export type AdminOverview = { users:{total:number;verified:number;admins:number}; plans:{free:number;pro:number;studio:number}; subscriptions:{total:number;active:number;inactive:number}; alerts:{rules_enabled:number;deliveries_sent_24h:number;deliveries_failed_24h:number;deliveries_skipped_24h:number}; reports:{pending:number;completed_24h:number;failed_24h:number}; notifications:{total:number;unread:number}; emails:{sent_24h:number;failed_24h:number;skipped_24h:number}; sources:{youtube:string;tiktok:string;instagram:string}; };
+export type AdminSystem = { runtime:{env:string;frontend_origin:string}; services:Record<string,string>; integrations:Record<string,string>; storage:{local_exports_dir:string;s3:string}; };
+export type AdminBilling = { subscriptions:{total:number;active:number;inactive:number;pro:number;studio:number}; mrr:{currency:string;estimate_cents:number;pro_unit_cents:number;studio_unit_cents:number}; stripe:{configured:boolean;webhook_configured:boolean;price_pro_configured:boolean;price_studio_configured:boolean}; };
+export type GoLiveItem = { key:string; label:string; status:'ok'|'warning'|'error'|'manual'; blocking:boolean; };
+export type GoLiveChecklistResponse = { items: GoLiveItem[] };
+
+
+export const fetchAdminOverview = () => request('/admin/overview') as Promise<AdminOverview>;
 export const fetchAdminUsers = (params: Record<string, string | number> = {}) => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => query.set(k, String(v)));
@@ -95,8 +102,8 @@ export const fetchAdminUsers = (params: Record<string, string | number> = {}) =>
 };
 export const fetchAdminSources = () => request('/admin/sources');
 export const fetchAdminJobs = () => request('/admin/jobs');
-export const fetchAdminSystem = () => request('/admin/system');
-export const fetchAdminBilling = () => request('/admin/billing');
+export const fetchAdminSystem = () => request('/admin/system') as Promise<AdminSystem>;
+export const fetchAdminBilling = () => request('/admin/billing') as Promise<AdminBilling>;
 
 export const fetchNotifications = () => request('/notifications');
 export const fetchUnreadNotificationsCount = () => request('/notifications/unread-count');
@@ -111,6 +118,6 @@ export const testAdminTelegram = (payload: { chat_id?: string }) =>
 export const testAdminSmtp = (payload: { to: string }) =>
   request('/admin/test-smtp', { method: 'POST', body: JSON.stringify(payload) });
 
-export const fetchAdminGoLiveChecklist = () => request('/admin/go-live-checklist');
+export const fetchAdminGoLiveChecklist = () => request('/admin/go-live-checklist') as Promise<GoLiveChecklistResponse>;
 export const testAdminYoutube = () => request('/admin/test-youtube', { method: 'POST' });
 export const testAdminStripe = () => request('/admin/test-stripe', { method: 'POST' });
