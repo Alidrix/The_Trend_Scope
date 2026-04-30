@@ -28,7 +28,7 @@
 ## 🌈 Bannière produit
 
 > **The Trend Scope** est une plateforme SaaS de veille virale pensée pour les créateurs, influenceurs, agences social media et marques.  
-> L’objectif : détecter les tendances vidéo émergentes sur **YouTube**. TikTok et Instagram restent sur la roadmap.
+> L’objectif : détecter les tendances vidéo émergentes sur **YouTube**. TikTok et Instagram restent sur la roadmap : bientôt disponible.
 
 <table>
   <tr>

@@ -1,4 +1,4 @@
-FROM rust:1.83-bookworm AS builder
+FROM rust:1.85-bookworm AS builder
 WORKDIR /app
 
 COPY backend/Cargo.toml backend/Cargo.lock* ./backend/
