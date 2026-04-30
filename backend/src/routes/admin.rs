@@ -104,9 +104,22 @@ pub async fn go_live_checklist(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    Ok(Json(
-        json!({"items":[{"key":"youtube","label":"YouTube API key configured","status": if state.config.youtube.api_key.is_empty(){"error"}else{"ok"},"blocking":true},{"key":"stripe","label":"Stripe configured","status": if stripe::config_from_env().is_some(){"ok"}else{"warning"},"blocking":true},{"key":"smtp","label":"SMTP configured","status": if state.config.smtp.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"telegram","label":"Telegram configured","status": if state.config.telegram.is_configured(){"ok"}else{"warning"},"blocking":false},{"key":"cloudflare","label":"Cloudflare token configured","status": if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"error"}else{"ok"},"blocking":true},{"key":"traefik_dynamic","label":"Traefik dynamic.yml configured","status":"manual","blocking":true},{"key":"database","label":"Database via PgBouncer","status":postgres_status(&state).await,"blocking":true},{"key":"redis","label":"Redis configured","status":redis_status(&state).await,"blocking":true},{"key":"nats","label":"NATS configured","status":nats_status(&state),"blocking":true},{"key":"exports","label":"Local exports directory configured","status":"ok","blocking":false}] }),
-    ))
+    Ok(Json(json!({ "items": go_live_items(&state).await })))
+}
+
+async fn go_live_items(state: &AppState) -> Vec<serde_json::Value> {
+    vec![
+        json!({"key":"youtube","label":"YouTube API key configured","status": if state.config.youtube.api_key.is_empty(){"error"}else{"ok"},"blocking":true}),
+        json!({"key":"stripe","label":"Stripe configured","status": if stripe::config_from_env().is_some(){"ok"}else{"warning"},"blocking":true}),
+        json!({"key":"smtp","label":"SMTP configured","status": if state.config.smtp.is_configured(){"ok"}else{"warning"},"blocking":false}),
+        json!({"key":"telegram","label":"Telegram configured","status": if state.config.telegram.is_configured(){"ok"}else{"warning"},"blocking":false}),
+        json!({"key":"cloudflare","label":"Cloudflare token configured","status": if std::env::var("CF_DNS_API_TOKEN").unwrap_or_default().is_empty(){"error"}else{"ok"},"blocking":true}),
+        json!({"key":"traefik_dynamic","label":"Traefik dynamic.yml configured","status":"manual","blocking":true}),
+        json!({"key":"database","label":"Database via PgBouncer","status":postgres_status(state).await,"blocking":true}),
+        json!({"key":"redis","label":"Redis configured","status":redis_status(state).await,"blocking":true}),
+        json!({"key":"nats","label":"NATS configured","status":nats_status(state),"blocking":true}),
+        json!({"key":"exports","label":"Local exports directory configured","status":"ok","blocking":false}),
+    ]
 }
 
 async fn postgres_status(state: &AppState) -> &'static str {
@@ -213,7 +226,11 @@ pub async fn exports_list(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     ensure_admin(&state.pool, &auth.sub).await?;
-    let exports=reports::latest_exports(&state.pool).await?.into_iter().map(|r|json!({"id":r.id,"title":r.title,"format":r.format,"file_url":r.file_url,"created_at":r.created_at})).collect::<Vec<_>>();
+    let exports = reports::latest_exports(&state.pool)
+        .await?
+        .into_iter()
+        .map(|r| json!({"id":r.id,"title":r.title,"format":r.format,"file_url":r.file_url,"created_at":r.created_at}))
+        .collect::<Vec<_>>();
     Ok(Json(json!({"exports":exports})))
 }
 pub async fn test_telegram(

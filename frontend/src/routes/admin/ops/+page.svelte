@@ -5,6 +5,7 @@
   import AdminSection from '$lib/components/AdminSection.svelte';
   import AdminStatCard from '$lib/components/AdminStatCard.svelte';
   import DataTable from '$lib/components/DataTable.svelte';
+  import AdminToolbar from '$lib/components/AdminToolbar.svelte';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import { getErrorMessage } from '$lib/errors';
   import { currentUser } from '$lib/stores/user';
@@ -109,10 +110,9 @@
     <p>Accès restreint</p>
   {:else}
     <PageHeader title="Admin ops" subtitle="Cockpit d'exploitation" />
-    <button on:click={load}>Refresh</button>
-
-    {#if loadingGlobal}<p>Chargement global…</p>{/if}
-    {#if errorGlobal}<p>{errorGlobal}</p>{/if}
+    <AdminToolbar loading={loadingGlobal} error={errorGlobal}>
+      <button type="button" on:click={load} disabled={loadingGlobal}>Refresh</button>
+    </AdminToolbar>
 
     <AdminSection title="Tests d'intégration">
       <div class="g">

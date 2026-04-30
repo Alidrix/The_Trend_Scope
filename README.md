@@ -784,3 +784,16 @@ Avant déploiement VPS :
 9. Lancer le smoke interne.
 10. Tester YouTube, Stripe, SMTP et Telegram.
 11. Vérifier `/admin/go-live`.
+
+
+## Cockpit admin
+
+Le cockpit admin est accessible aux comptes `admin`.
+
+| Page | Usage |
+| --- | --- |
+| `/admin` | Vue globale SaaS |
+| `/admin/system` | Runtime, services internes et intégrations |
+| `/admin/billing` | Abonnements, MRR estimé et état Stripe |
+| `/admin/ops` | Tests SMTP, Telegram, YouTube, Stripe et smoke interne |
+| `/admin/go-live` | Checklist préproduction avant VPS |
