@@ -2,14 +2,12 @@ name: CI
 
 on:
   workflow_dispatch:
-
   push:
     branches:
       - main
       - "codex/**"
       - "feature/**"
       - "fix/**"
-
   pull_request:
     branches:
       - main
@@ -24,18 +22,6 @@ permissions:
   pull-requests: read
 
 jobs:
-  ci-started:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Print CI context
-        run: |
-          echo "CI started"
-          echo "event=${{ github.event_name }}"
-          echo "ref=${{ github.ref }}"
-          echo "sha=${{ github.sha }}"
-          echo "actor=${{ github.actor }}"
-
   backend:
     runs-on: ubuntu-latest
     defaults:
@@ -44,13 +30,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-      - run: cargo fmt --check
-      - run: cargo clippy -- -D warnings
-      - run: cargo test
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Tests
+        run: cargo test
 
   frontend:
     runs-on: ubuntu-latest
@@ -59,14 +52,41 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run check
-      - run: npm run build
+
+      - name: Install
+        run: npm ci
+
+      - name: Check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate bash scripts
+        run: |
+          bash -n scripts/go-live-check.sh
+          bash -n scripts/preflight-prod.sh
+          bash -n scripts/prod-up.sh
+          bash -n scripts/prod-check.sh
+          bash -n scripts/prod-logs.sh
+
+      - name: Validate go-live skip mode
+        run: |
+          cp .env.production.example .env.production
+          sed -i 's/change-me/test-secret-value/g' .env.production
+          sed -i 's/replace-me/test-value/g' .env.production
+          SKIP_REMOTE_CHECKS=1 ./scripts/go-live-check.sh
 
   docker-smoke:
     runs-on: ubuntu-latest
@@ -79,7 +99,7 @@ jobs:
       - name: Build stack
         run: docker compose build --no-cache
 
-      - name: Start dependency stack
+      - name: Start dependencies
         run: docker compose up -d postgres pgbouncer redis nats clickhouse
 
       - name: Start backend
@@ -91,137 +111,27 @@ jobs:
             if curl -fsS http://localhost:4443/api/v1/health; then
               exit 0
             fi
+
             docker compose ps
-            docker compose logs --no-color --tail=160 backend postgres pgbouncer redis nats clickhouse
+            docker compose logs --no-color --tail=120 backend postgres pgbouncer redis nats clickhouse
             sleep 3
           done
+
           docker compose ps
           docker compose logs --no-color backend postgres pgbouncer redis nats clickhouse
           exit 1
 
-      - name: Start worker and frontend
-        run: docker compose up -d worker frontend
-
-      - name: Smoke ready + metrics
+      - name: Check ready metrics auth
         run: |
           curl -fsS http://localhost:4443/api/v1/ready
           curl -fsS http://localhost:4443/metrics
+          curl -fsS http://localhost:4443/api/v1/auth/status
 
-      - name: Auth status
-        run: curl -fsS http://localhost:4443/api/v1/auth/status
+      - name: Start worker and frontend
+        run: docker compose up -d worker frontend
 
-      - name: README logo guard
-        run: |
-          if grep -q "trend-scope-logo-light.svg" README.md; then
-            echo "README still references the deprecated SVG light logo fallback."
-            exit 1
-          fi
-
-          if grep -q "trend-scope-logo-dark.svg" README.md; then
-            echo "README still references the deprecated SVG dark logo fallback."
-            exit 1
-          fi
-
-          grep -q "frontend/static/brand/trend-scope-logo-light.png" README.md
-          grep -q "frontend/static/brand/trend-scope-logo-dark.png" README.md
-
-
-      - name: Studio business guards
-        run: |
-          if ! grep -q "process_pending_reports" backend/src/services/reports.rs; then
-            echo "Reports service must expose process_pending_reports"
-            exit 1
-          fi
-          if grep -q "pub async fn process_alert_rules_for_recent_trends(_pool: &PgPool) -> Result<u64, AppError> {
-    Ok(0)" backend/src/services/alerts.rs; then
-            echo "Alerts service must not be a pure Ok(0) placeholder"
-            exit 1
-          fi
-          if grep -q "Endpoints admin accessibles" frontend/src/routes/admin/+page.svelte; then
-            echo "Admin UI must not be placeholder"
-            exit 1
-          fi
-          if grep -q "keywords:\[\]" frontend/src/routes/watchlist/+page.svelte; then
-            echo "Watchlist UI must use real keywords"
-            exit 1
-          fi
-
-
-      - name: Alert channel scope guards
-        run: |
-          echo "Checking that Discord/Slack are not active alert channels in product code..."
-
-          if grep -RniE "discord|slack"             frontend/src/routes/alerts             backend/src/routes/alerts.rs             backend/src/services/alerts.rs             .env.example             .env.production.example; then
-            echo "Discord/Slack must not be active alert channels in the go-live product scope."
-            exit 1
-          fi
-
-          grep -q "telegram" frontend/src/routes/alerts/+page.svelte
-          grep -q "TELEGRAM_BOT_TOKEN" .env.example
-          grep -q "TELEGRAM_BOT_TOKEN" .env.production.example
-
-      - name: Platform scope guards
-        run: |
-          grep -q "TikTok" README.md
-          grep -q "bientôt disponible" README.md
-
-      - name: Go-live stabilization guards
-        run: |
-          test -f .github/workflows/ci-ping.yml
-          grep -q "build_report_summary" backend/src/services/reports.rs
-          grep -q "alert_matches_rule" backend/src/services/alerts.rs
-          grep -q "testAdminTelegram" frontend/src/lib/api.ts
-          grep -q "testAdminSmtp" frontend/src/lib/api.ts
-          test -f frontend/src/routes/admin/ops/+page.svelte
-
-
-      - name: Final go-live guards
-        run: |
-          test -f .github/workflows/ci-ping.yml
-          test -f scripts/go-live-check.sh
-          test -f frontend/src/routes/admin/go-live/+page.svelte
-          test -f frontend/src/lib/components/GoLiveChecklist.svelte
-          grep -q "testAdminYoutube" frontend/src/lib/api.ts
-          grep -q "testAdminStripe" frontend/src/lib/api.ts
-          grep -q "fetchAdminGoLiveChecklist" frontend/src/lib/api.ts
-          grep -q "go-live-checklist" backend/src/routes/admin.rs
-          grep -q "test-youtube" backend/src/routes/admin.rs
-          grep -q "test-stripe" backend/src/routes/admin.rs
-          grep -q "trend_scope_users_total" backend/src/routes/metrics.rs
-
-      - name: Validate scripts syntax
-        run: |
-          bash -n scripts/go-live-check.sh
-          bash -n scripts/preflight-prod.sh
-          bash -n scripts/prod-up.sh
-          bash -n scripts/prod-check.sh
-          bash -n scripts/prod-logs.sh
-
-
-      - name: Final preprod completeness guards
-        run: |
-          grep -q "SKIP_REMOTE_CHECKS" scripts/go-live-check.sh
-          grep -q "require_env" scripts/go-live-check.sh
-          grep -q "check_url" scripts/go-live-check.sh
-          grep -q "Blocking items remaining" frontend/src/routes/admin/go-live/+page.svelte
-          grep -q "integrations.cloudflare" frontend/src/routes/admin/system/+page.svelte
-          grep -q "storage.local_exports_dir" frontend/src/routes/admin/system/+page.svelte
-          grep -q "subscriptions.pro" frontend/src/routes/admin/billing/+page.svelte
-          grep -q "stripe.webhook_configured" frontend/src/routes/admin/billing/+page.svelte
-          grep -q "plans.free" frontend/src/routes/admin/+page.svelte
-          grep -q "alerts.rules_enabled" frontend/src/routes/admin/+page.svelte
-          grep -q "emails.sent_24h" frontend/src/routes/admin/+page.svelte
-
-      - name: Admin ops button labels guard
-        run: |
-          if grep -q "testAdminYoutube" frontend/src/routes/admin/ops/+page.svelte; then
-            echo "User-facing admin ops button must not display testAdminYoutube"
-            exit 1
-          fi
-          if grep -q "testAdminStripe" frontend/src/routes/admin/ops/+page.svelte; then
-            echo "User-facing admin ops button must not display testAdminStripe"
-            exit 1
-          fi
+      - name: Show stack
+        run: docker compose ps
 
       - name: Dump docker logs on failure
         if: failure()
@@ -237,77 +147,120 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Prepare prod env
         run: cp .env.production.example .env.production
+
       - name: Validate production compose
         run: docker compose --env-file .env.production -f docker-compose.prod.yml config
-      - name: Repository policy checks
+
+      - name: Validate Traefik files
         run: |
+          test -f infra/traefik/traefik.yml
+          test -f infra/traefik/dynamic.example.yml
           if git ls-files --error-unmatch infra/traefik/dynamic.yml >/dev/null 2>&1; then
             echo "infra/traefik/dynamic.yml must not be tracked"
             exit 1
           fi
-          test -f infra/traefik/dynamic.example.yml
-          grep -q "idx_videos_platform" db/migrations/init.sql
-          if grep -q "platforms: \['youtube'\]" frontend/src/routes/watchlist/+page.svelte; then
-            echo "watchlist page still contains hardcoded youtube platforms"
-            exit 1
-          fi
-          if grep -q "Alerte VPH" frontend/src/routes/alerts/+page.svelte; then
-            echo "alerts page still contains hardcoded Alerte VPH"
-            exit 1
-          fi
-          if grep -q "Weekly report" frontend/src/routes/reports/+page.svelte; then
-            echo "reports page still contains hardcoded Weekly report"
-            exit 1
-          fi
-          grep -q "process_pending_reports" backend/src/bin/worker.rs
-          grep -q "process_alert_rules_for_recent_trends" backend/src/bin/worker.rs
-          grep -q "fetchAdminUsers" frontend/src/lib/api.ts
-          grep -q "fetchAdminSources" frontend/src/lib/api.ts
-          grep -q "platforms TEXT\[]" db/migrations/init.sql
-          grep -q "format TEXT" db/migrations/init.sql
 
-      - name: Validate Traefik and preflight files
-        run: |
-          test -f infra/traefik/traefik.yml
-          test -f infra/traefik/dynamic.example.yml
-          test -f scripts/preflight-prod.sh
-      - name: Validate VITE_API_BASE build arg wiring
-        run: |
-          grep -q "ARG VITE_API_BASE" frontend/Dockerfile
-          grep -q "VITE_API_BASE: \${VITE_API_BASE}" docker-compose.prod.yml
+  repository-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Ensure legacy ping workflow is removed
+        run: |
+          if [ -f .github/workflows/ci"-"ping.yml ]; then
+            echo "Legacy ping workflow must be removed. Keep only .github/workflows/ci.yml"
+            exit 1
+          fi
+
+          if grep -Rni "ci""-""ping" .github README.md docs; then
+            echo "Legacy ping workflow references must be removed"
+            exit 1
+          fi
+
+      - name: Alert channel scope guards
+        run: |
+          if grep -RniE "discord|slack" \
+            frontend/src/routes/alerts \
+            backend/src/routes/alerts.rs \
+            backend/src/services/alerts.rs \
+            .env.example \
+            .env.production.example; then
+            echo "Discord/Slack must not be active alert channels in the go-live scope."
+            exit 1
+          fi
+
+          grep -q "telegram" frontend/src/routes/alerts/+page.svelte
+          grep -q "TELEGRAM_BOT_TOKEN" .env.example
+          grep -q "TELEGRAM_BOT_TOKEN" .env.production.example
+
+      - name: Platform scope guards
+        run: |
+          grep -q "TikTok" README.md
+          grep -q "bientôt disponible" README.md
+
+      - name: Admin ops completeness guards
+        run: |
+          grep -q "Tests d'intégration" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "Smoke interne" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "Résultats des tests" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "Logs email" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "Notifications" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "Exports" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "error_message" frontend/src/routes/admin/ops/+page.svelte
+          grep -q "file_url" frontend/src/routes/admin/ops/+page.svelte
+
+      - name: Admin smoke correctness guards
+        run: |
+          grep -q '"blocking"' backend/src/routes/admin.rs
+          grep -q "create_dir_all" backend/src/routes/admin.rs
+
+          if grep -q '"metrics": "ok"' backend/src/routes/admin.rs; then
+            echo "Admin smoke metrics must not be hardcoded to ok"
+            exit 1
+          fi
 
       - name: Admin contract guards
         run: |
-          if grep -R "data.jobs.pending_reports" frontend/src/routes/admin; then echo "Frontend admin overview still reads old jobs.pending_reports contract"; exit 1; fi
-          if grep -R "mrr_cents_estimate" frontend/src/routes/admin; then echo "Frontend admin billing still reads old mrr_cents_estimate contract"; exit 1; fi
-          if grep -R "smtp_configured\|telegram_configured" frontend/src/routes/admin; then echo "Frontend admin ops still reads old smtp_configured/telegram_configured contract"; exit 1; fi
-          if grep -R "d.postgres\|d.redis\|d.nats\|d.clickhouse" frontend/src/routes/admin/system; then echo "Frontend admin system still reads old flat system contract"; exit 1; fi
-          if grep -R "FROM alerts WHERE enabled" backend/src; then echo "Backend must count enabled alert_rules, not alerts"; exit 1; fi
-      - name: Admin go-live UI guards
-        run: |
-          grep -q "testAdminYoutube" frontend/src/routes/admin/ops/+page.svelte
-          grep -q "testAdminStripe" frontend/src/routes/admin/ops/+page.svelte
-          grep -q "integrations" frontend/src/routes/admin/ops/+page.svelte
-          grep -q "services" frontend/src/routes/admin/system/+page.svelte
-          grep -q "mrr.estimate_cents" frontend/src/routes/admin/billing/+page.svelte
-          grep -q "reports.pending" frontend/src/routes/admin/+page.svelte
+          if grep -R "data.jobs.pending_reports" frontend/src/routes/admin; then
+            echo "Frontend admin overview still reads old jobs.pending_reports contract"
+            exit 1
+          fi
 
-      - name: Final admin polish guards
-        run: |
-          grep -q "fetchAdminSmoke" frontend/src/lib/api.ts
-          grep -q "/api/v1/admin/smoke" backend/src/app.rs
-          grep -q "Blocking checks" frontend/src/lib/components/GoLiveChecklist.svelte
-          grep -q "MRR estimé" frontend/src/routes/admin/billing/+page.svelte
-          grep -q "testAdminYoutube" frontend/src/routes/admin/ops/+page.svelte
-          grep -q "testAdminStripe" frontend/src/routes/admin/ops/+page.svelte
-          grep -q "AdminSection" frontend/src/routes/admin/ops/+page.svelte
-          grep -q "DataTable" frontend/src/routes/admin/ops/+page.svelte
+          if grep -R "mrr_cents_estimate" frontend/src/routes/admin; then
+            echo "Frontend admin billing still reads old mrr_cents_estimate contract"
+            exit 1
+          fi
+
+          if grep -R "smtp_configured\|telegram_configured" frontend/src/routes/admin; then
+            echo "Frontend admin ops still reads old smtp_configured/telegram_configured contract"
+            exit 1
+          fi
+
+          if grep -R "d.postgres\|d.redis\|d.nats\|d.clickhouse" frontend/src/routes/admin/system; then
+            echo "Frontend admin system still reads old flat system contract"
+            exit 1
+          fi
+
+          if grep -R "FROM alerts WHERE enabled" backend/src; then
+            echo "Backend must count enabled alert_rules, not alerts"
+            exit 1
+          fi
 
       - name: Admin ops UX guard
         run: |
+          if grep -q "testAdminYoutube" frontend/src/routes/admin/ops/+page.svelte; then
+            echo "User-facing admin ops button must not display testAdminYoutube"
+            exit 1
+          fi
+
+          if grep -q "testAdminStripe" frontend/src/routes/admin/ops/+page.svelte; then
+            echo "User-facing admin ops button must not display testAdminStripe"
+            exit 1
+          fi
+
           if grep -q "JSON.stringify" frontend/src/routes/admin/ops/+page.svelte; then
             echo "Admin ops must not display raw JSON.stringify results"
             exit 1

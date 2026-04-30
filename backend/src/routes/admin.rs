@@ -141,6 +141,22 @@ async fn redis_status(state: &AppState) -> &'static str {
     }
 }
 
+async fn metrics_status(state: &AppState) -> &'static str {
+    let users_ok = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        .fetch_one(&state.pool)
+        .await
+        .is_ok();
+    let reports_ok = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM reports")
+        .fetch_one(&state.pool)
+        .await
+        .is_ok();
+    if users_ok && reports_ok {
+        "ok"
+    } else {
+        "error"
+    }
+}
+
 fn nats_status(state: &AppState) -> &'static str {
     if state.config.nats.nats_url.trim().is_empty() {
         "not_configured"
@@ -287,7 +303,7 @@ pub async fn smoke(
         "postgres": postgres_status(&state).await,
         "redis": redis_status(&state).await,
         "nats": nats_status(&state),
-        "metrics": "ok",
+        "metrics": metrics_status(&state).await,
         "youtube_config": if state.config.youtube.api_key.is_empty() { "not_configured" } else { "configured" },
         "stripe_config": if stripe::config_from_env().is_some() { "configured" } else { "not_configured" },
         "smtp_config": if state.config.smtp.is_configured() { "configured" } else { "not_configured" },

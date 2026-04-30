@@ -707,25 +707,25 @@ Seul Traefik expose `80` et `443`.
 
 Note: `webhook_url` est conservé uniquement par compatibilité DB mais n'est pas utilisé dans le scope go-live.
 
-## Diagnostic CI GitHub Actions
+## CI officielle
 
 | Workflow | Rôle |
 | --- | --- |
-| `CI` | Tests backend, frontend, docker smoke, prod compose |
-| `CI Ping` | Diagnostic minimal pour vérifier que GitHub Actions déclenche bien |
+| `CI` | Backend, frontend, scripts, Docker smoke, prod compose et guards produit |
 
-Si aucun workflow ne se lance après un push :
-1. Aller dans `Settings → Actions → General`.
-2. Vérifier que GitHub Actions est activé.
-3. Vérifier que `Allow all actions and reusable workflows` est activé.
-4. Aller dans l’onglet `Actions`.
-5. Vérifier que le workflow `CI` ou `CI Ping` n’est pas désactivé.
-6. Lancer manuellement `workflow_dispatch`.
+Un ancien workflow de diagnostic a été supprimé pour garder une seule CI officielle.
+
+### Déclenchements
+
+La CI se lance sur :
+
+- `workflow_dispatch`
+- `push` vers `main`, `codex/**`, `feature/**`, `fix/**`
+- `pull_request` vers `main`
 
 ## Go-live : tests d’exploitation
-1. Lancer `CI Ping` manuellement.
-2. Vérifier que `CI` se lance.
-3. Déployer sur VPS.
+1. Vérifier que `CI` se lance.
+2. Déployer sur VPS.
 4. Configurer `.env.production`.
 5. Lancer `./scripts/preflight-prod.sh`.
 6. Tester `/api/v1/health`.
