@@ -342,6 +342,22 @@ La page `/admin/backups` permet de vérifier en lecture seule :
 - rétention configurée ;
 - commandes opérateur utiles.
 
+## Monitoring production optionnel
+
+Pour la configuration complète Prometheus / Alertmanager / Grafana / Loki, voir [`docs/monitoring.md`](monitoring.md).
+
+### Mode strict monitoring
+
+```bash
+REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-monitoring-check.sh
+```
+
+Premier VPS sans monitoring démarré
+
+```bash
+SKIP_MONITORING_CHECK=1 ./scripts/prod-go-no-go.sh
+```
+
 ## Go / No-Go VPS
 
 Commande opérateur finale :

@@ -877,10 +877,13 @@ SKIP_BACKUP_VERIFY=1 ./scripts/prod-go-no-go.sh
 
 Stack optionnelle :
 
+Pour le détail complet, voir [`docs/monitoring.md`](docs/monitoring.md).
+
 | Service | Rôle |
 | --- | --- |
 | Prometheus | Scrape `/metrics` |
-| Grafana | Dashboards |
+| Alertmanager | Routage interne des alertes |
+| Grafana | Dashboards (protégé via Traefik Basic Auth) |
 | Loki | Stockage logs |
 | Promtail | Collecte logs Docker |
 
@@ -890,7 +893,7 @@ Démarrage :
 docker compose --env-file .env.production \
   -f docker-compose.prod.yml \
   -f docker-compose.monitoring.yml \
-  up -d prometheus grafana loki promtail
+  up -d prometheus alertmanager grafana loki promtail
 ```
 
 Vérification :
