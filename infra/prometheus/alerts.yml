@@ -36,3 +36,21 @@ groups:
         annotations:
           summary: "Unread notifications are high"
           description: "Unread notifications exceed 100."
+
+      - alert: TrendScopePendingReportsHigh
+        expr: trend_scope_reports_pending > 20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pending reports are high"
+          description: "Pending reports exceed 20 for more than 10 minutes."
+
+      - alert: TrendScopeAlertDeliveryFailures
+        expr: trend_scope_alert_deliveries_failed_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alert delivery failures detected"
+          description: "At least one alert delivery failed."

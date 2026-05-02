@@ -12,6 +12,21 @@ services:
     expose:
       - "9090"
 
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: trend-scope-alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - trend-scope-private
+    expose:
+      - "9093"
+
   grafana:
     image: grafana/grafana:latest
     container_name: trend-scope-grafana
@@ -64,3 +79,4 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  alertmanager_data:

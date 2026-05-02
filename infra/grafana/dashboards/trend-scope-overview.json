@@ -1,21 +1,289 @@
 {
-  "annotations": {"list": []},
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "panels": [
-    {"type":"stat","title":"Users total","gridPos":{"h":4,"w":4,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_users_total"}]},
-    {"type":"stat","title":"Users by plan","gridPos":{"h":4,"w":4,"x":4,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by(plan) (trend_scope_users_by_plan_total)"}]},
-    {"type":"stat","title":"Reports pending","gridPos":{"h":4,"w":4,"x":8,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_reports_pending_total"}]},
-    {"type":"stat","title":"Reports failed","gridPos":{"h":4,"w":4,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_reports_failed_total"}]},
-    {"type":"timeseries","title":"Alert deliveries","gridPos":{"h":8,"w":8,"x":0,"y":4},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_alert_deliveries_sent_total","legendFormat":"sent"},{"expr":"trend_scope_alert_deliveries_failed_total","legendFormat":"failed"},{"expr":"trend_scope_alert_deliveries_skipped_total","legendFormat":"skipped"}]},
-    {"type":"stat","title":"Unread notifications","gridPos":{"h":4,"w":4,"x":8,"y":4},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_notifications_unread_total"}]},
-    {"type":"timeseries","title":"Email deliveries","gridPos":{"h":8,"w":8,"x":12,"y":4},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_email_logs_sent_total","legendFormat":"sent"},{"expr":"trend_scope_email_logs_failed_total","legendFormat":"failed"},{"expr":"trend_scope_email_logs_skipped_total","legendFormat":"skipped"}]}
+    {
+      "type": "stat",
+      "title": "Users total",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_users_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Users Free",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_users_plan_free"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Users Pro",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_users_plan_pro"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Users Studio",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_users_plan_studio"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Reports pending",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_reports_pending"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Reports completed",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_reports_completed_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Reports failed",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_reports_failed_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Alert deliveries sent",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_alert_deliveries_sent_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Alert deliveries failed",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_alert_deliveries_failed_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Alert deliveries skipped",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_alert_deliveries_skipped_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Unread notifications",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_notifications_unread_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Email sent",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_email_logs_sent_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Email failed",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_email_logs_failed_total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Email skipped",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "trend_scope_email_logs_skipped_total"
+        }
+      ]
+    }
   ],
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["trend-scope"],
-  "templating": {"list": []},
-  "time": {"from": "now-6h", "to": "now"},
+  "tags": [
+    "trend-scope"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "title": "Trend Scope Overview",
   "uid": "trend-scope-overview",
-  "version": 1
+  "version": 2
 }
