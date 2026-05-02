@@ -15,3 +15,6 @@ backups/
 *.sha256
 *.dump
 restore-dry-run/
+
+!frontend/src/routes/admin/backups/
+!frontend/src/routes/admin/backups/+page.svelte
