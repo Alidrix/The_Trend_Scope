@@ -260,6 +260,25 @@ export type AdminAuditLog = {
   metadata?: Record<string, unknown>;
   created_at?: string;
 };
+export type AdminBackupStatusItem = {
+  directory: string;
+  latest_file?: string | null;
+  latest_age_seconds?: number | null;
+  latest_size_bytes?: number | null;
+  checksum_file?: string | null;
+  checksum_present: boolean;
+  status: string;
+};
+export type AdminBackupsStatus = {
+  postgres: AdminBackupStatusItem;
+  exports: AdminBackupStatusItem;
+  retention: {
+    backup_retention_days: number;
+    audit_retention_days: number;
+    max_backup_age_hours?: number;
+  };
+  warnings: string[];
+};
 
 export type AdminAuditLogsResponse = {
   logs: AdminAuditLog[];
@@ -371,6 +390,8 @@ export const runAdminYoutubeCheck = testAdminYoutube;
 export const runAdminStripeCheck = testAdminStripe;
 export const fetchAdminSmoke = () =>
   request("/admin/smoke") as Promise<AdminSmoke>;
+export const fetchAdminBackupsStatus = () =>
+  request('/admin/backups/status') as Promise<AdminBackupsStatus>;
 
 export const fetchAdminAuditLogs = (filters: AdminAuditLogFilters = {}) => {
   const params = new URLSearchParams();

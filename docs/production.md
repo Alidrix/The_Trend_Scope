@@ -329,3 +329,62 @@ Le script vérifie :
 - les checksums SHA256 ;
 - la fraîcheur du dernier backup ;
 - la taille totale du dossier de backups.
+
+
+## Dashboard backups admin
+
+La page `/admin/backups` permet de vérifier en lecture seule :
+
+- dernier backup PostgreSQL ;
+- dernier backup exports ;
+- présence des checksums ;
+- fraîcheur des backups ;
+- rétention configurée ;
+- commandes opérateur utiles.
+
+## Go / No-Go VPS
+
+Commande opérateur finale :
+
+```bash
+./scripts/prod-go-no-go.sh
+```
+
+Pour un premier déploiement sans backup existant :
+
+```bash
+SKIP_BACKUP_VERIFY=1 ./scripts/prod-go-no-go.sh
+```
+
+
+## Go / No-Go préproduction
+
+Avant exposition publique :
+
+1. CI GitHub verte.
+2. `docker compose --env-file .env.production -f docker-compose.prod.yml config` OK.
+3. `./scripts/prod-check.sh` OK.
+4. `./scripts/prod-volumes-check.sh` OK.
+5. `./scripts/prod-backup.sh` exécuté au moins une fois.
+6. `./scripts/prod-backup-verify.sh` OK.
+7. `/admin/system` OK.
+8. `/admin/ops` smoke OK.
+9. `/admin/backups` sans erreur bloquante.
+10. `/admin/go-live` sans item bloquant en error.
+
+## Test de restauration hors production
+
+```bash
+./scripts/prod-restore-dry-run.sh backups/postgres/postgres-YYYYMMDD-HHMMSS.sql.gz
+```
+
+Ce test restaure le dump dans un conteneur PostgreSQL temporaire et ne touche jamais à la base de production.
+
+## Runbook incident production
+
+1. Confirmer l'incident et geler les changements.
+2. Vérifier l'état API (`/health`, `/ready`) et journaux (`./scripts/prod-logs.sh`).
+3. Vérifier le dernier backup (`./scripts/prod-backup-verify.sh`).
+4. Exécuter un dry-run (`./scripts/prod-restore-dry-run.sh <backup>`).
+5. Si restauration validée, appliquer `./scripts/prod-restore.sh <backup>` selon procédure approuvée.
+6. Vérifier `/admin/system`, `/admin/backups`, `/admin/go-live`.

@@ -17,6 +17,8 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::time::SystemTime;
+use tokio::fs;
 #[derive(Debug, Deserialize)]
 pub struct AdminUsersQuery {
     pub page: Option<i64>,
@@ -38,6 +40,17 @@ pub struct AuditLogsQuery {
 struct AdminAuditContext {
     ip_address: Option<String>,
     user_agent: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct BackupStatus {
+    directory: String,
+    latest_file: Option<String>,
+    latest_age_seconds: Option<u64>,
+    latest_size_bytes: Option<u64>,
+    checksum_file: Option<String>,
+    checksum_present: bool,
+    status: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -244,6 +257,134 @@ pub async fn audit_logs(
     )
     .await;
     Ok(Json(json!({ "logs": logs })))
+}
+
+async fn latest_backup_status(
+    directory: &str,
+    prefix: &str,
+    extension: &str,
+    max_age_hours: u64,
+) -> BackupStatus {
+    let mut status = BackupStatus {
+        directory: directory.to_string(),
+        latest_file: None,
+        latest_age_seconds: None,
+        latest_size_bytes: None,
+        checksum_file: None,
+        checksum_present: false,
+        status: "not_found".to_string(),
+    };
+    let mut entries = match fs::read_dir(directory).await {
+        Ok(entries) => entries,
+        Err(_) => {
+            status.status = "error".to_string();
+            return status;
+        }
+    };
+    let mut latest_name: Option<String> = None;
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if name.starts_with(prefix)
+            && name.ends_with(extension)
+            && latest_name
+                .as_ref()
+                .map(|v| name > v.as_str())
+                .unwrap_or(true)
+        {
+            latest_name = Some(name.to_string());
+        }
+    }
+    let Some(latest_file) = latest_name else {
+        return status;
+    };
+    status.latest_file = Some(latest_file.clone());
+    let file_path = format!("{directory}/{latest_file}");
+    if let Ok(metadata) = fs::metadata(&file_path).await {
+        status.latest_size_bytes = Some(metadata.len());
+        if let Ok(modified) = metadata.modified() {
+            if let Ok(age) = SystemTime::now().duration_since(modified) {
+                status.latest_age_seconds = Some(age.as_secs());
+            }
+        }
+    }
+    let checksum_file = format!("{latest_file}.sha256");
+    status.checksum_present = fs::metadata(format!("{directory}/{checksum_file}"))
+        .await
+        .is_ok();
+    status.checksum_file = Some(checksum_file);
+
+    let too_old = status
+        .latest_age_seconds
+        .map(|age| age > max_age_hours * 3600)
+        .unwrap_or(true);
+    status.status = if !status.checksum_present || too_old {
+        "warning".to_string()
+    } else {
+        "ok".to_string()
+    };
+    status
+}
+
+pub async fn backups_status(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let audit_context = audit_context_from_headers(&headers);
+    ensure_admin(&state.pool, &auth.sub).await?;
+    let backup_dir = std::env::var("BACKUP_DIR").unwrap_or_else(|_| "backups/postgres".to_string());
+    let exports_dir =
+        std::env::var("EXPORTS_BACKUP_DIR").unwrap_or_else(|_| "backups/exports".to_string());
+    let backup_retention_days = std::env::var("BACKUP_RETENTION_DAYS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(14);
+    let audit_retention_days = std::env::var("AUDIT_RETENTION_DAYS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(90);
+    let max_backup_age_hours = std::env::var("MAX_BACKUP_AGE_HOURS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(24);
+
+    let postgres =
+        latest_backup_status(&backup_dir, "postgres-", ".sql.gz", max_backup_age_hours).await;
+    let exports =
+        latest_backup_status(&exports_dir, "exports-", ".tar.gz", max_backup_age_hours).await;
+    let mut warnings = Vec::new();
+    if postgres.status != "ok" {
+        warnings.push(format!("postgres status: {}", postgres.status));
+    }
+    if exports.status != "ok" {
+        warnings.push(format!("exports status: {}", exports.status));
+    }
+    audit_admin_action(
+        &state,
+        &auth.sub,
+        "backups_status",
+        None,
+        "ok",
+        audit_context,
+        json!({"postgres_status": postgres.status, "exports_status": exports.status}),
+    )
+    .await;
+    Ok(Json(json!({
+        "postgres": postgres,
+        "exports": exports,
+        "retention": {
+            "backup_retention_days": backup_retention_days,
+            "audit_retention_days": audit_retention_days,
+            "max_backup_age_hours": max_backup_age_hours
+        },
+        "warnings": warnings
+    })))
 }
 
 async fn go_live_items(state: &AppState) -> Vec<serde_json::Value> {

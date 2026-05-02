@@ -11,12 +11,12 @@ use crate::{
     repositories::users::ensure_seed_user,
     routes::{
         admin::{
-            audit_logs as admin_audit_logs, billing as admin_billing,
-            email_logs_list as admin_email_logs, exports_list as admin_exports,
-            go_live_checklist as admin_go_live_checklist, jobs as admin_jobs,
-            notifications_snapshot as admin_notifications, overview as admin_overview,
-            smoke as admin_smoke, sources as admin_sources, system as admin_system,
-            test_smtp as admin_test_smtp, test_stripe as admin_test_stripe,
+            audit_logs as admin_audit_logs, backups_status as admin_backups_status,
+            billing as admin_billing, email_logs_list as admin_email_logs,
+            exports_list as admin_exports, go_live_checklist as admin_go_live_checklist,
+            jobs as admin_jobs, notifications_snapshot as admin_notifications,
+            overview as admin_overview, smoke as admin_smoke, sources as admin_sources,
+            system as admin_system, test_smtp as admin_test_smtp, test_stripe as admin_test_stripe,
             test_telegram as admin_test_telegram, test_youtube as admin_test_youtube,
             users as admin_users,
         },
@@ -200,6 +200,7 @@ pub fn build_router(state: AppState) -> Result<Router, AppError> {
             .route("/api/v1/admin/email-logs", get(|auth: AuthBearer, state| async move { admin_email_logs(auth, state).await }))
             .route("/api/v1/admin/notifications", get(|auth: AuthBearer, state| async move { admin_notifications(auth, state).await }))
             .route("/api/v1/admin/exports", get(|auth: AuthBearer, state, headers| async move { admin_exports(auth, state, headers).await }))
+            .route("/api/v1/admin/backups/status", get(|auth: AuthBearer, state, headers| async move { admin_backups_status(auth, state, headers).await }))
             .route("/api/v1/admin/test-telegram", post(|auth: AuthBearer, state, headers, payload| async move { admin_test_telegram(auth, state, headers, payload).await }))
             .route("/api/v1/admin/test-smtp", post(|auth: AuthBearer, state, headers, payload| async move { admin_test_smtp(auth, state, headers, payload).await }))
             .route("/api/v1/admin/test-youtube", post(|auth: AuthBearer, state, headers| async move { admin_test_youtube(auth, state, headers).await }))

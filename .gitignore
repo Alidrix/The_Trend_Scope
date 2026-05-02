@@ -13,3 +13,5 @@ backups/
 *.tar.gz
 *.sql.gz
 *.sha256
+*.dump
+restore-dry-run/
