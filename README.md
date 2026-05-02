@@ -871,3 +871,30 @@ Pour un premier déploiement sans backup existant :
 ```bash
 SKIP_BACKUP_VERIFY=1 ./scripts/prod-go-no-go.sh
 ```
+
+
+## Monitoring préproduction
+
+Stack optionnelle :
+
+| Service | Rôle |
+| --- | --- |
+| Prometheus | Scrape `/metrics` |
+| Grafana | Dashboards |
+| Loki | Stockage logs |
+| Promtail | Collecte logs Docker |
+
+Démarrage :
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.prod.yml \
+  -f docker-compose.monitoring.yml \
+  up -d prometheus grafana loki promtail
+```
+
+Vérification :
+
+```bash
+./scripts/prod-monitoring-check.sh
+```

@@ -249,6 +249,22 @@ export type AdminExport = {
   created_at?: string;
 };
 
+
+export type AdminIncidentsStatus = {
+  status: string;
+  checks: Record<string, string>;
+  counters: {
+    reports_failed: number;
+    reports_pending: number;
+    emails_failed: number;
+    notifications_unread: number;
+  };
+  runbook: {
+    docs: string;
+    recommended_actions: string[];
+  };
+};
+
 export type AdminAuditLog = {
   id: string;
   admin_username: string;
@@ -406,3 +422,6 @@ export const fetchAdminAuditLogs = (filters: AdminAuditLogFilters = {}) => {
   const query = params.toString();
   return request(`/admin/audit-logs${query ? `?${query}` : ''}`) as Promise<AdminAuditLogsResponse>;
 };
+
+export const fetchAdminIncidentsStatus = () =>
+  request("/admin/incidents/status") as Promise<AdminIncidentsStatus>;

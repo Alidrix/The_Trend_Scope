@@ -1,0 +1,21 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"type":"stat","title":"Users total","gridPos":{"h":4,"w":4,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_users_total"}]},
+    {"type":"stat","title":"Users by plan","gridPos":{"h":4,"w":4,"x":4,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by(plan) (trend_scope_users_by_plan_total)"}]},
+    {"type":"stat","title":"Reports pending","gridPos":{"h":4,"w":4,"x":8,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_reports_pending_total"}]},
+    {"type":"stat","title":"Reports failed","gridPos":{"h":4,"w":4,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_reports_failed_total"}]},
+    {"type":"timeseries","title":"Alert deliveries","gridPos":{"h":8,"w":8,"x":0,"y":4},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_alert_deliveries_sent_total","legendFormat":"sent"},{"expr":"trend_scope_alert_deliveries_failed_total","legendFormat":"failed"},{"expr":"trend_scope_alert_deliveries_skipped_total","legendFormat":"skipped"}]},
+    {"type":"stat","title":"Unread notifications","gridPos":{"h":4,"w":4,"x":8,"y":4},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_notifications_unread_total"}]},
+    {"type":"timeseries","title":"Email deliveries","gridPos":{"h":8,"w":8,"x":12,"y":4},"datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"trend_scope_email_logs_sent_total","legendFormat":"sent"},{"expr":"trend_scope_email_logs_failed_total","legendFormat":"failed"},{"expr":"trend_scope_email_logs_skipped_total","legendFormat":"skipped"}]}
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["trend-scope"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "Trend Scope Overview",
+  "uid": "trend-scope-overview",
+  "version": 1
+}

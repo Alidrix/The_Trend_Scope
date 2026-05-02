@@ -388,3 +388,35 @@ Ce test restaure le dump dans un conteneur PostgreSQL temporaire et ne touche ja
 4. Exécuter un dry-run (`./scripts/prod-restore-dry-run.sh <backup>`).
 5. Si restauration validée, appliquer `./scripts/prod-restore.sh <backup>` selon procédure approuvée.
 6. Vérifier `/admin/system`, `/admin/backups`, `/admin/go-live`.
+
+## Runbook incident
+
+### Backend indisponible
+
+1. Vérifier `/api/v1/health`.
+2. Vérifier `/api/v1/ready`.
+3. Vérifier `/admin/system`.
+4. Consulter les logs backend.
+5. Vérifier PostgreSQL / Redis / NATS.
+6. Lancer `./scripts/prod-go-no-go.sh`.
+
+### Backups absents ou anciens
+
+1. Ouvrir `/admin/backups`.
+2. Lancer `./scripts/prod-backup.sh`.
+3. Lancer `./scripts/prod-backup-verify.sh`.
+4. Vérifier les timers systemd.
+
+### Emails échoués
+
+1. Ouvrir `/admin/ops`.
+2. Vérifier SMTP.
+3. Vérifier les logs email.
+4. Vérifier les variables SMTP dans `.env.production`.
+
+### Rapports en échec
+
+1. Vérifier `/admin/incidents`.
+2. Vérifier les logs worker.
+3. Vérifier PostgreSQL / exports.
+4. Relancer un rapport de test.
