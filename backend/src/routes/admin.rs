@@ -259,6 +259,96 @@ pub async fn audit_logs(
     Ok(Json(json!({ "logs": logs })))
 }
 
+pub async fn incidents_status(
+    auth: AuthBearer,
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    ensure_admin(&state.pool, &auth.sub).await?;
+    let audit_context = audit_context_from_headers(&headers);
+
+    let reports_failed: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM reports WHERE status='failed'")
+            .fetch_one(&state.pool)
+            .await?;
+    let reports_pending: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM reports WHERE status='pending'")
+            .fetch_one(&state.pool)
+            .await?;
+    let emails_failed: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM email_logs WHERE status='failed'")
+            .fetch_one(&state.pool)
+            .await?;
+    let notifications_unread: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM notifications WHERE is_read=false")
+            .fetch_one(&state.pool)
+            .await?;
+
+    let backend_metrics = metrics_status(&state).await;
+    let failed_reports_status = if reports_failed > 0 { "error" } else { "ok" };
+    let failed_emails_status = if emails_failed > 0 { "error" } else { "ok" };
+    let pending_reports_status = if reports_pending > 20 {
+        "warning"
+    } else {
+        "ok"
+    };
+    let unread_notifications_status = if notifications_unread > 100 {
+        "warning"
+    } else {
+        "ok"
+    };
+
+    let status = if reports_failed > 0 || emails_failed > 0 {
+        "error"
+    } else if reports_pending > 20 || notifications_unread > 100 {
+        "warning"
+    } else {
+        "ok"
+    };
+
+    audit_admin_action(
+        &state,
+        &auth.sub,
+        "incidents_status",
+        None,
+        status,
+        audit_context,
+        json!({
+            "reports_failed": reports_failed,
+            "reports_pending": reports_pending,
+            "emails_failed": emails_failed,
+            "notifications_unread": notifications_unread
+        }),
+    )
+    .await;
+
+    Ok(Json(json!({
+      "status": status,
+      "checks": {
+        "backend_metrics": backend_metrics,
+        "failed_reports": failed_reports_status,
+        "failed_emails": failed_emails_status,
+        "pending_reports": pending_reports_status,
+        "unread_notifications": unread_notifications_status
+      },
+      "counters": {
+        "reports_failed": reports_failed,
+        "reports_pending": reports_pending,
+        "emails_failed": emails_failed,
+        "notifications_unread": notifications_unread
+      },
+      "runbook": {
+        "docs": "docs/production.md",
+        "recommended_actions": [
+          "Check /admin/system",
+          "Check /admin/ops smoke",
+          "Check /admin/backups",
+          "Run ./scripts/prod-go-no-go.sh"
+        ]
+      }
+    })))
+}
+
 async fn latest_backup_status(
     directory: &str,
     prefix: &str,

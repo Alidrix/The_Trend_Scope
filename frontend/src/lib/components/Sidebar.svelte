@@ -19,7 +19,7 @@
     <a href={link[1]}>{link[0]}</a>
   {/each}
   {#if isAdmin}
-    {#each [['Admin Overview','/admin'],['Admin Ops','/admin/ops'],['Admin System','/admin/system'],['Admin Billing','/admin/billing'],['Admin Backups','/admin/backups'],['Go-live Checklist','/admin/go-live'],['Admin Audit','/admin/audit']] as link}
+    {#each [['Admin Overview','/admin'],['Admin Ops','/admin/ops'],['Admin System','/admin/system'],['Admin Billing','/admin/billing'],['Admin Backups','/admin/backups'],['Admin Incidents','/admin/incidents'],['Go-live Checklist','/admin/go-live'],['Admin Audit','/admin/audit']] as link}
       <a href={link[1]}>{link[0]}</a>
     {/each}
   {/if}

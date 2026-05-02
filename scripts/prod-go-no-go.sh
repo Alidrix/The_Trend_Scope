@@ -40,6 +40,13 @@ else
   run_check "backup verify" ./scripts/prod-backup-verify.sh
 fi
 
+if [ "${SKIP_MONITORING_CHECK:-0}" = "1" ]; then
+  echo "⚠️ Monitoring verification skipped"
+  RESULTS+=("⚠️ Monitoring verification skipped")
+else
+  run_check "monitoring check" ./scripts/prod-monitoring-check.sh
+fi
+
 run_check "go-live check" ./scripts/go-live-check.sh
 
 echo

@@ -1,0 +1,38 @@
+groups:
+  - name: trend-scope-alerts
+    rules:
+      - alert: TrendScopeBackendDown
+        expr: up{job="trend-scope-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Trend Scope backend is down"
+          description: "Prometheus cannot scrape /metrics from the backend."
+
+      - alert: TrendScopeHighFailedReports
+        expr: trend_scope_reports_failed_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Failed reports detected"
+          description: "At least one report is in failed status."
+
+      - alert: TrendScopeFailedEmails
+        expr: trend_scope_email_logs_failed_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Failed emails detected"
+          description: "Email logs contain failed deliveries."
+
+      - alert: TrendScopeUnreadNotificationsHigh
+        expr: trend_scope_notifications_unread_total > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unread notifications are high"
+          description: "Unread notifications exceed 100."
