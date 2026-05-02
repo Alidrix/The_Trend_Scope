@@ -48,6 +48,13 @@ else
   RESULTS+=("✅ monitoring check OK")
 fi
 
+if [ "${SKIP_ALERTING_TEST:-1}" = "1" ]; then
+  echo "⚠️ Alerting test skipped"
+  RESULTS+=("⚠️ Alerting test skipped")
+else
+  run_check "alerting test" ./scripts/prod-alerting-test.sh
+fi
+
 run_check "go-live check" ./scripts/go-live-check.sh
 
 echo

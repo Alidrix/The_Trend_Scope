@@ -1,14 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 REQUIRE_MONITORING_RUNNING="${REQUIRE_MONITORING_RUNNING:-0}"
-fail(){ echo "❌ $1"; exit 1; }
-info(){ echo "ℹ️  $1"; }
-success(){ echo "✅ $1"; }
-require_file(){ [ -f "$1" ] || fail "Missing required file: $1"; }
-compose(){ docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.monitoring.yml "$@"; }
-curl_container(){ local container="$1"; local url="$2"; docker run --rm --network "container:${container}" curlimages/curl:8.10.1 -fsS "$url" >/dev/null; }
-check_config(){
+CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:8.10.1}"
+
+fail() {
+  echo "❌ $1"
+  exit 1
+}
+
+info() {
+  echo "ℹ️  $1"
+}
+
+success() {
+  echo "✅ $1"
+}
+
+require_file() {
+  [ -f "$1" ] || fail "Missing required file: $1"
+}
+
+compose() {
+  docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.monitoring.yml "$@"
+}
+
+curl_container() {
+  local container="$1"
+  local url="$2"
+
+  docker run --rm --network "container:${container}" "$CURL_IMAGE" -fsS "$url" >/dev/null
+}
+
+check_required_files() {
   info "Checking required monitoring files"
+
   require_file .env.production
   require_file docker-compose.monitoring.yml
   require_file infra/prometheus/prometheus.yml
@@ -20,12 +46,22 @@ check_config(){
   require_file infra/grafana/dashboards/trend-scope-infra.json
   require_file infra/promtail/promtail.yml
   require_file infra/blackbox/blackbox.yml
+}
+
+check_compose_config() {
+  info "Validating compose monitoring configuration"
   compose config >/dev/null
   success "Monitoring configuration is valid"
 }
-check_running_services(){
+
+show_services() {
+  info "Monitoring services status"
+  compose ps prometheus alertmanager grafana loki promtail node-exporter cadvisor blackbox || true
+}
+
+check_runtime_readiness() {
   info "REQUIRE_MONITORING_RUNNING=1, checking running monitoring services"
-  compose ps prometheus alertmanager grafana loki promtail node-exporter cadvisor blackbox >/dev/null
+
   curl_container trend-scope-prometheus http://localhost:9090/-/ready
   curl_container trend-scope-grafana http://localhost:3000/api/health
   curl_container trend-scope-loki http://localhost:3100/ready
@@ -33,8 +69,22 @@ check_running_services(){
   curl_container trend-scope-blackbox http://localhost:9115/-/healthy
   curl_container trend-scope-node-exporter http://localhost:9100/metrics
   curl_container trend-scope-cadvisor http://localhost:8080/metrics
+
   success "Monitoring services readiness checks passed"
 }
-check_config
-if [ "$REQUIRE_MONITORING_RUNNING" = "1" ]; then check_running_services; else info "REQUIRE_MONITORING_RUNNING=0, skipping runtime readiness checks"; fi
-success "Monitoring checks completed"
+
+main() {
+  check_required_files
+  check_compose_config
+  show_services
+
+  if [ "$REQUIRE_MONITORING_RUNNING" = "1" ]; then
+    check_runtime_readiness
+  else
+    info "REQUIRE_MONITORING_RUNNING=0, skipping runtime readiness checks"
+  fi
+
+  success "Monitoring checks completed"
+}
+
+main "$@"

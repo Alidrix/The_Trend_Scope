@@ -902,6 +902,18 @@ Vérification :
 ./scripts/prod-monitoring-check.sh
 ```
 
+### Test Alertmanager
+
+```bash
+./scripts/prod-alerting-test.sh
+```
+
+Avec stack monitoring démarrée :
+
+```bash
+REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-alerting-test.sh
+```
+
 Premier VPS sans monitoring démarré :
 
 ```bash

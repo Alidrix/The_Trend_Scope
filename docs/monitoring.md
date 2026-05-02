@@ -115,3 +115,37 @@ Page admin monitoring
 `/admin/monitoring`
 
 Cette page est read-only et permet de vérifier l’état Prometheus, Grafana, Loki, Alertmanager, Blackbox, Node Exporter et cAdvisor.
+
+## Notifications Alertmanager
+
+Par défaut, Alertmanager utilise un receiver neutre pour valider la chaîne Prometheus → Alertmanager sans envoyer de notification externe.
+
+Fichier actif par défaut :
+
+```txt
+infra/alertmanager/alertmanager.yml
+```
+
+Exemple webhook interne :
+
+```txt
+infra/alertmanager/alertmanager.webhook.example.yml
+```
+
+### Test manuel Alertmanager
+
+Mode validation config :
+
+```bash
+./scripts/prod-alerting-test.sh
+```
+
+Mode strict avec Alertmanager démarré :
+
+```bash
+REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-alerting-test.sh
+```
+
+### Règle de sécurité
+
+Ne jamais commiter de secrets SMTP, Telegram, webhook ou tokens dans les fichiers Alertmanager.

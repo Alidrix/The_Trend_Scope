@@ -443,3 +443,13 @@ Ce test restaure le dump dans un conteneur PostgreSQL temporaire et ne touche ja
 1. Ouvrir `/admin/monitoring`.
 2. Vérifier que Prometheus, Grafana, Loki, Alertmanager, Blackbox, Node Exporter et cAdvisor sont `ok`.
 3. Lancer `REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-monitoring-check.sh`.
+
+### Test alerting optionnel
+
+Par défaut, `prod-go-no-go.sh` ne déclenche pas d’alerte manuelle.
+
+Pour tester explicitement Alertmanager :
+
+```bash
+SKIP_ALERTING_TEST=0 REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-go-no-go.sh
+```

@@ -18,3 +18,8 @@ restore-dry-run/
 
 !frontend/src/routes/admin/backups/
 !frontend/src/routes/admin/backups/+page.svelte
+
+alertmanager-data/
+prometheus-data/
+grafana-data/
+loki-data/

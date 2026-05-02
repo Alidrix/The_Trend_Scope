@@ -1,6 +1,6 @@
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}
     container_name: trend-scope-prometheus
     restart: unless-stopped
     volumes:
@@ -13,7 +13,7 @@ services:
       - "9090"
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: ${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.27.0}
     container_name: trend-scope-alertmanager
     restart: unless-stopped
     command:
@@ -28,7 +28,7 @@ services:
       - "9093"
 
   grafana:
-    image: grafana/grafana:latest
+    image: ${GRAFANA_IMAGE:-grafana/grafana:11.4.0}
     container_name: trend-scope-grafana
     restart: unless-stopped
     env_file: .env.production
@@ -52,7 +52,7 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   loki:
-    image: grafana/loki:latest
+    image: ${LOKI_IMAGE:-grafana/loki:3.3.2}
     container_name: trend-scope-loki
     restart: unless-stopped
     command: -config.file=/etc/loki/local-config.yaml
@@ -64,7 +64,7 @@ services:
       - "3100"
 
   promtail:
-    image: grafana/promtail:latest
+    image: ${PROMTAIL_IMAGE:-grafana/promtail:3.3.2}
     container_name: trend-scope-promtail
     restart: unless-stopped
     volumes:
@@ -76,7 +76,7 @@ services:
       - trend-scope-private
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: ${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.8.2}
     container_name: trend-scope-node-exporter
     restart: unless-stopped
     command:
@@ -89,7 +89,7 @@ services:
       - "9100"
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: ${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:v0.49.1}
     container_name: trend-scope-cadvisor
     restart: unless-stopped
     privileged: true
@@ -105,7 +105,7 @@ services:
       - "8080"
 
   blackbox:
-    image: prom/blackbox-exporter:latest
+    image: ${BLACKBOX_EXPORTER_IMAGE:-prom/blackbox-exporter:v0.25.0}
     container_name: trend-scope-blackbox
     restart: unless-stopped
     volumes:
