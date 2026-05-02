@@ -50,6 +50,9 @@
       url
     }));
 
+  const strictModeCommand = 'REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-monitoring-check.sh';
+  const strictModeStatus = 'disabled by default (REQUIRE_MONITORING_RUNNING=0)';
+
   onMount(load);
 </script>
 
@@ -101,8 +104,16 @@
     </AdminSection>
 
     <AdminSection title="Mode strict">
+      <div class="strict-grid">
+        <AdminStatCard label="Strict mode" value={strictModeStatus} status="warning" />
+        <AdminStatCard
+          label="Alertmanager runtime"
+          value={data?.services?.alertmanager ?? 'unknown'}
+          status={data?.services?.alertmanager ?? 'warning'}
+        />
+      </div>
       <ul>
-        <li><code>REQUIRE_MONITORING_RUNNING=1 ./scripts/prod-monitoring-check.sh</code></li>
+        <li><code>{strictModeCommand}</code></li>
       </ul>
     </AdminSection>
 
@@ -122,7 +133,8 @@
 </AppShell>
 
 <style>
-  .stats-grid {
+  .stats-grid,
+  .strict-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.75rem;
